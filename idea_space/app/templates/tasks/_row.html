@@ -13,5 +13,15 @@
   {% for label in task.labels %}
   <span class="label-chip" style="background-color: {{ label.color }};">{{ label.name }}</span>
   {% endfor %}
+  {% if all_labels %}
+  <form hx-post="/tasks/{{ task.id }}/labels" hx-target="#task-list" hx-swap="outerHTML" style="display:inline">
+    <select name="label_id">
+      {% for label in all_labels %}
+      <option value="{{ label.id }}">{{ label.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Add label</button>
+  </form>
+  {% endif %}
   <button hx-post="/tasks/{{ task.id }}/complete" hx-target="#task-list" hx-swap="outerHTML">Done</button>
 </li>

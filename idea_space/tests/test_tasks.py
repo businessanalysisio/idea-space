@@ -93,6 +93,35 @@ def test_completing_recurring_task_spawns_successor(client, db_session):
     assert successor.recurrence_active is True
 
 
+def test_completing_recurring_task_carries_labels_to_successor(client, db_session):
+    from app.models import Label, Task
+
+    due = datetime(2026, 9, 20, 9, 0, tzinfo=UTC).strftime("%Y-%m-%dT%H:%M")
+    client.post(
+        "/tasks",
+        data={
+            "title": "Weekly review",
+            "due_date": due,
+            "recurrence_pattern": "weekly",
+            "recurrence_interval": "1",
+        },
+    )
+    client.post("/labels", data={"name": "Focus", "color": "#22c55e"})
+
+    original = db_session.query(Task).filter_by(title="Weekly review").one()
+    label = db_session.query(Label).filter_by(name="Focus").one()
+    client.post(f"/tasks/{original.id}/labels", data={"label_id": label.id})
+
+    client.post(f"/tasks/{original.id}/complete")
+
+    successor = (
+        db_session.query(Task)
+        .filter(Task.recurrence_series_id == original.recurrence_series_id, Task.id != original.id)
+        .one()
+    )
+    assert [l.name for l in successor.labels] == ["Focus"]
+
+
 def test_completing_paused_recurring_task_does_not_spawn_successor(client, db_session):
     from app.models import Task
 

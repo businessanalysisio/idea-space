@@ -67,3 +67,22 @@ def test_assign_label_to_task(client, db_session):
 
     db_session.refresh(task)
     assert [l.name for l in task.labels] == ["Urgent"]
+
+
+def test_tasks_page_shows_label_manager_and_create_form(client):
+    response = client.get("/tasks")
+    assert b'id="label-manager"' in response.content
+    assert b'hx-post="/labels"' in response.content
+
+
+def test_task_row_shows_label_assignment_control_when_labels_exist(client, db_session):
+    from app.models import Task
+
+    due = (datetime.now(UTC) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+    client.post("/tasks", data={"title": "Draft outline", "due_date": due})
+    client.post("/labels", data={"name": "Urgent", "color": "#ef4444"})
+
+    task = db_session.query(Task).filter_by(title="Draft outline").one()
+
+    response = client.get("/tasks")
+    assert f'hx-post="/tasks/{task.id}/labels"'.encode() in response.content

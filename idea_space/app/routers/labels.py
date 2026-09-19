@@ -24,7 +24,7 @@ def create_label(
     db.commit()
 
     return templates.TemplateResponse(
-        request, "labels/_filter_bar.html", {"labels": _all_labels(db)}
+        request, "labels/_filter_bar.html", {"all_labels": _all_labels(db)}
     )
 
 
@@ -38,7 +38,7 @@ def rename_label(request: Request, label_id: int, name: str = Form(...), db: Ses
     db.commit()
 
     return templates.TemplateResponse(
-        request, "labels/_filter_bar.html", {"labels": _all_labels(db)}
+        request, "labels/_filter_bar.html", {"all_labels": _all_labels(db)}
     )
 
 
@@ -53,7 +53,7 @@ def delete_label(request: Request, label_id: int, db: Session = Depends(get_db))
     db.commit()
 
     return templates.TemplateResponse(
-        request, "labels/_filter_bar.html", {"labels": _all_labels(db)}
+        request, "labels/_filter_bar.html", {"all_labels": _all_labels(db)}
     )
 
 
@@ -73,4 +73,9 @@ def assign_label(
     from app.routers.tasks import _open_tasks
 
     tasks = _open_tasks(db)
-    return templates.TemplateResponse(request, "tasks/list.html", {"tasks": tasks})
+    all_labels = _all_labels(db)
+    return templates.TemplateResponse(
+        request,
+        "tasks/list.html",
+        {"tasks": tasks, "all_labels": all_labels, "selected_label_ids": [], "status": "open"},
+    )

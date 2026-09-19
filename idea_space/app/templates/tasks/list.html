@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 {% include "tasks/_form.html" %}
+{% include "labels/_filter_bar.html" %}
 <nav class="filter-bar">
   {% for label in all_labels|default([]) %}
   <a href="/tasks?labels={{ label.id }}{% if status|default('open') != 'open' %}&status={{ status }}{% endif %}"

@@ -139,6 +139,7 @@ def complete_task(request: Request, task_id: int, db: Session = Depends(get_db))
                 recurrence_interval=task.recurrence_interval,
                 recurrence_days_of_week=task.recurrence_days_of_week,
                 recurrence_active=True,
+                labels=list(task.labels),
             )
             db.add(successor)
             db.commit()
