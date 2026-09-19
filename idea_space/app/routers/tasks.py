@@ -15,11 +15,10 @@ templates = Jinja2Templates(directory="app/templates")
 def _attach_overdue_flag(tasks: list[Task]) -> list[Task]:
     now = datetime.now(timezone.utc)
     for task in tasks:
-        # Ensure due_date is timezone-aware (SQLite returns naive datetimes)
-        due_date = task.due_date
-        if due_date.tzinfo is None:
-            due_date = due_date.replace(tzinfo=timezone.utc)
-        task.is_overdue = task.status == "open" and due_date < now
+        # SQLite strips tzinfo on read-back; normalize before comparing.
+        if task.due_date.tzinfo is None:
+            task.due_date = task.due_date.replace(tzinfo=timezone.utc)
+        task.is_overdue = task.status == "open" and task.due_date < now
     return tasks
 
 
