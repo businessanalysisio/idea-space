@@ -119,3 +119,23 @@ def complete_task(request: Request, task_id: int, db: Session = Depends(get_db))
     return templates.TemplateResponse(
         request, "tasks/list.html", {"tasks": tasks}
     )
+
+
+@router.patch("/tasks/{task_id}/recurrence")
+def set_recurrence_active(
+    request: Request,
+    task_id: int,
+    active: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    task = db.get(Task, task_id)
+    if task is None or task.recurrence_pattern is None:
+        raise HTTPException(status_code=404, detail="Recurring task not found")
+
+    task.recurrence_active = active.lower() == "true"
+    db.commit()
+
+    tasks = _open_tasks(db)
+    return templates.TemplateResponse(
+        request, "tasks/list.html", {"tasks": tasks}
+    )

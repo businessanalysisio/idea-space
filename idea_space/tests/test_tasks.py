@@ -118,3 +118,31 @@ def test_completing_paused_recurring_task_does_not_spawn_successor(client, db_se
         .all()
     )
     assert successors == []
+
+
+def test_pause_recurrence_sets_inactive(client, db_session):
+    from app.models import Task
+
+    due = (datetime.now(UTC) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+    client.post(
+        "/tasks",
+        data={"title": "Daily standup", "due_date": due, "recurrence_pattern": "daily"},
+    )
+    task = db_session.query(Task).filter_by(title="Daily standup").one()
+
+    response = client.patch(f"/tasks/{task.id}/recurrence", data={"active": "false"})
+    assert response.status_code == 200
+
+    db_session.refresh(task)
+    assert task.recurrence_active is False
+
+
+def test_pause_recurrence_on_non_recurring_task_returns_404(client, db_session):
+    from app.models import Task
+
+    due = (datetime.now(UTC) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+    client.post("/tasks", data={"title": "One-off review", "due_date": due})
+    task = db_session.query(Task).filter_by(title="One-off review").one()
+
+    response = client.patch(f"/tasks/{task.id}/recurrence", data={"active": "false"})
+    assert response.status_code == 404

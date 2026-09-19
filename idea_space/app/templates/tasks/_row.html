@@ -1,6 +1,14 @@
 <li class="task{% if task.is_overdue %} task--overdue{% endif %}" data-task-id="{{ task.id }}" draggable="true">
   <span class="task-title">{{ task.title }}</span>
   <span class="task-due">{{ task.due_date.strftime('%Y-%m-%d %H:%M') }}</span>
-  {% if task.recurrence_active %}<span class="task-recurring" title="Repeats {{ task.recurrence_pattern }}">↻</span>{% endif %}
+  {% if task.recurrence_pattern %}
+    <span class="task-recurring" title="Repeats {{ task.recurrence_pattern }}">↻</span>
+    <button
+      hx-patch="/tasks/{{ task.id }}/recurrence"
+      hx-vals='{"active": "{{ "false" if task.recurrence_active else "true" }}"}'
+      hx-target="#task-list" hx-swap="outerHTML">
+      {{ "Pause" if task.recurrence_active else "Resume" }}
+    </button>
+  {% endif %}
   <button hx-post="/tasks/{{ task.id }}/complete" hx-target="#task-list" hx-swap="outerHTML">Done</button>
 </li>
