@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
-{% if overdue %}
-<section class="calendar-overdue">
-  <h2>Overdue</h2>
-  <ul>
-    {% for task in overdue %}
-    <li class="task task--overdue" data-task-id="{{ task.id }}">{{ task.title }} — {{ task.due_date.strftime('%Y-%m-%d') }}</li>
-    {% endfor %}
-  </ul>
-</section>
-{% endif %}
-<div class="calendar-week">
+<div class="calendar-week" data-week-start="{{ week_start.strftime('%Y-%m-%d') }}">
+  {% if overdue %}
+  <section class="calendar-overdue">
+    <h2>Overdue</h2>
+    <ul>
+      {% for task in overdue %}
+      <li class="task task--overdue" data-task-id="{{ task.id }}">{{ task.title }} — {{ task.due_date.strftime('%Y-%m-%d') }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+  {% endif %}
   {% for day in days %}
   <div class="calendar-day" data-date="{{ day['date'].strftime('%Y-%m-%d') }}">
     <h3>{{ day['date'].strftime('%a %b %d') }}</h3>

@@ -146,3 +146,42 @@ def test_pause_recurrence_on_non_recurring_task_returns_404(client, db_session):
 
     response = client.patch(f"/tasks/{task.id}/recurrence", data={"active": "false"})
     assert response.status_code == 404
+
+
+def test_reschedule_moves_task_to_new_date(client, db_session):
+    from app.models import Task
+
+    due = datetime(2026, 9, 22, 10, 0, tzinfo=UTC)
+    client.post(
+        "/tasks",
+        data={"title": "Stakeholder sync", "due_date": due.strftime("%Y-%m-%dT%H:%M")},
+    )
+    task = db_session.query(Task).filter_by(title="Stakeholder sync").one()
+
+    response = client.patch(f"/tasks/{task.id}/reschedule", data={"due_date": "2026-09-24"})
+    assert response.status_code == 200
+
+    db_session.refresh(task)
+    assert task.due_date.date().isoformat() == "2026-09-24"
+    assert task.due_date.time().isoformat() == "10:00:00"
+
+
+def test_reschedule_non_open_task_returns_404(client, db_session):
+    from app.models import Task
+
+    due = datetime(2026, 9, 22, 10, 0, tzinfo=UTC)
+    client.post(
+        "/tasks",
+        data={"title": "Completed task", "due_date": due.strftime("%Y-%m-%dT%H:%M")},
+    )
+    task = db_session.query(Task).filter_by(title="Completed task").one()
+    task.status = "done"
+    db_session.commit()
+
+    response = client.patch(f"/tasks/{task.id}/reschedule", data={"due_date": "2026-09-24"})
+    assert response.status_code == 404
+
+
+def test_reschedule_unknown_task_returns_404(client):
+    response = client.patch("/tasks/999/reschedule", data={"due_date": "2026-09-24"})
+    assert response.status_code == 404

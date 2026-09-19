@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import Task
+from app.routers import calendar as calendar_router
 from app.seed import seed_default_workspace
 from app.services.recurrence import compute_next_due_date
 
@@ -139,3 +140,23 @@ def set_recurrence_active(
     return templates.TemplateResponse(
         request, "tasks/list.html", {"tasks": tasks}
     )
+
+
+@router.patch("/tasks/{task_id}/reschedule")
+def reschedule_task(
+    request: Request,
+    task_id: int,
+    due_date: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    task = db.get(Task, task_id)
+    if task is None or task.status != "open":
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    new_date = datetime.strptime(due_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    task.due_date = task.due_date.replace(
+        year=new_date.year, month=new_date.month, day=new_date.day
+    )
+    db.commit()
+
+    return calendar_router.calendar_week(request, start=None, db=db)
