@@ -5,7 +5,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Task
+from app.models import Label, Task
 from app.routers import calendar as calendar_router
 from app.seed import seed_default_workspace
 from app.services.recurrence import compute_next_due_date
@@ -24,21 +24,37 @@ def _attach_overdue_flag(tasks: list[Task]) -> list[Task]:
     return tasks
 
 
-def _open_tasks(db: Session) -> list[Task]:
-    tasks = (
-        db.query(Task)
-        .filter(Task.status == "open")
-        .order_by(Task.due_date.asc())
-        .all()
-    )
+def _filtered_tasks(db: Session, label_ids: list[int] | None, status: str) -> list[Task]:
+    query = db.query(Task).filter(Task.status == status)
+    if label_ids:
+        query = query.join(Task.labels).filter(Label.id.in_(label_ids)).distinct()
+    tasks = query.order_by(Task.due_date.asc()).all()
     return _attach_overdue_flag(tasks)
 
 
+def _open_tasks(db: Session) -> list[Task]:
+    return _filtered_tasks(db, None, "open")
+
+
 @router.get("/tasks")
-def list_tasks(request: Request, db: Session = Depends(get_db)):
-    tasks = _open_tasks(db)
+def list_tasks(
+    request: Request,
+    labels: str | None = None,
+    status: str = "open",
+    db: Session = Depends(get_db),
+):
+    label_ids = [int(x) for x in labels.split(",")] if labels else None
+    tasks = _filtered_tasks(db, label_ids, status)
+    all_labels = db.query(Label).order_by(Label.name.asc()).all()
     return templates.TemplateResponse(
-        request, "tasks/list.html", {"tasks": tasks}
+        request,
+        "tasks/list.html",
+        {
+            "tasks": tasks,
+            "all_labels": all_labels,
+            "selected_label_ids": label_ids or [],
+            "status": status,
+        },
     )
 
 
@@ -74,8 +90,11 @@ def create_task(
         db.commit()
 
     tasks = _open_tasks(db)
+    all_labels = db.query(Label).order_by(Label.name.asc()).all()
     return templates.TemplateResponse(
-        request, "tasks/list.html", {"tasks": tasks}
+        request,
+        "tasks/list.html",
+        {"tasks": tasks, "all_labels": all_labels, "selected_label_ids": [], "status": "open"},
     )
 
 
@@ -117,8 +136,11 @@ def complete_task(request: Request, task_id: int, db: Session = Depends(get_db))
             db.commit()
 
     tasks = _open_tasks(db)
+    all_labels = db.query(Label).order_by(Label.name.asc()).all()
     return templates.TemplateResponse(
-        request, "tasks/list.html", {"tasks": tasks}
+        request,
+        "tasks/list.html",
+        {"tasks": tasks, "all_labels": all_labels, "selected_label_ids": [], "status": "open"},
     )
 
 
@@ -137,8 +159,11 @@ def set_recurrence_active(
     db.commit()
 
     tasks = _open_tasks(db)
+    all_labels = db.query(Label).order_by(Label.name.asc()).all()
     return templates.TemplateResponse(
-        request, "tasks/list.html", {"tasks": tasks}
+        request,
+        "tasks/list.html",
+        {"tasks": tasks, "all_labels": all_labels, "selected_label_ids": [], "status": "open"},
     )
 
 

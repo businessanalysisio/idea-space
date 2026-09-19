@@ -185,3 +185,46 @@ def test_reschedule_non_open_task_returns_404(client, db_session):
 def test_reschedule_unknown_task_returns_404(client):
     response = client.patch("/tasks/999/reschedule", data={"due_date": "2026-09-24"})
     assert response.status_code == 404
+
+
+def test_filter_tasks_by_label(client, db_session):
+    from app.models import Label, Task
+
+    due = (datetime.now(UTC) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+    client.post("/tasks", data={"title": "Draft outline", "due_date": due})
+    client.post("/tasks", data={"title": "Review budget", "due_date": due})
+    client.post("/labels", data={"name": "Urgent", "color": "#ef4444"})
+
+    outline = db_session.query(Task).filter_by(title="Draft outline").one()
+    label = db_session.query(Label).filter_by(name="Urgent").one()
+    client.post(f"/tasks/{outline.id}/labels", data={"label_id": label.id})
+
+    response = client.get(f"/tasks?labels={label.id}")
+    assert b"Draft outline" in response.content
+    assert b"Review budget" not in response.content
+
+
+def test_filter_tasks_by_multiple_labels_is_or_matched(client, db_session):
+    from app.models import Label, Task
+
+    due = (datetime.now(UTC) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+    client.post("/tasks", data={"title": "Draft outline", "due_date": due})
+    client.post("/tasks", data={"title": "Review budget", "due_date": due})
+    client.post("/labels", data={"name": "Urgent", "color": "#ef4444"})
+    client.post("/labels", data={"name": "Finance", "color": "#3b82f6"})
+
+    outline = db_session.query(Task).filter_by(title="Draft outline").one()
+    budget = db_session.query(Task).filter_by(title="Review budget").one()
+    urgent = db_session.query(Label).filter_by(name="Urgent").one()
+    finance = db_session.query(Label).filter_by(name="Finance").one()
+    client.post(f"/tasks/{outline.id}/labels", data={"label_id": urgent.id})
+    client.post(f"/tasks/{budget.id}/labels", data={"label_id": finance.id})
+
+    response = client.get(f"/tasks?labels={urgent.id},{finance.id}")
+    assert b"Draft outline" in response.content
+    assert b"Review budget" in response.content
+
+
+def test_clear_filters_link_present(client):
+    response = client.get("/tasks?labels=1&status=open")
+    assert b'href="/tasks"' in response.content
