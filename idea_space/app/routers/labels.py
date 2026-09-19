@@ -76,6 +76,6 @@ def assign_label(
     all_labels = _all_labels(db)
     return templates.TemplateResponse(
         request,
-        "tasks/_list_fragment.html",
-        {"tasks": tasks, "all_labels": all_labels, "selected_label_ids": [], "status": "open"},
+        "tasks/_task_list_only.html",
+        {"tasks": tasks, "all_labels": all_labels},
     )
