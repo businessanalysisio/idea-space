@@ -1,0 +1,9 @@
+<div id="reminder-banner" hx-get="/reminders/due" hx-trigger="every 30s" hx-swap="outerHTML">
+  {% for reminder in reminders %}
+  <div class="reminder" data-reminder-id="{{ reminder.id }}">
+    <span>{{ reminder.task_title }}</span>
+    <button hx-post="/reminders/{{ reminder.id }}/snooze" hx-vals='{"minutes": "15"}' hx-target="#reminder-banner" hx-swap="outerHTML">Snooze 15m</button>
+    <button hx-post="/reminders/{{ reminder.id }}/dismiss" hx-target="#reminder-banner" hx-swap="outerHTML">Dismiss</button>
+  </div>
+  {% endfor %}
+</div>

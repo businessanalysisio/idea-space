@@ -66,6 +66,7 @@ def create_task(
     recurrence_pattern: str | None = Form(None),
     recurrence_interval: int = Form(1),
     recurrence_days_of_week: str | None = Form(None),
+    remind_at: str | None = Form(None),
     db: Session = Depends(get_db),
 ):
     workspace, user = seed_default_workspace(db)
@@ -84,6 +85,13 @@ def create_task(
     db.add(task)
     db.commit()
     db.refresh(task)
+
+    if remind_at:
+        from app.models import Reminder
+
+        parsed_remind_at = datetime.fromisoformat(remind_at).replace(tzinfo=timezone.utc)
+        db.add(Reminder(task_id=task.id, remind_at=parsed_remind_at))
+        db.commit()
 
     if recurrence_pattern:
         task.recurrence_series_id = task.id
