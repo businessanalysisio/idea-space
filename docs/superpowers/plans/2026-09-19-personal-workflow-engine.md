@@ -85,7 +85,7 @@ idea_space/
 ```
 fastapi==0.115.0
 uvicorn==0.30.6
-sqlalchemy==2.0.35
+sqlalchemy==2.0.54
 jinja2==3.1.4
 python-multipart==0.0.9
 python-dateutil==2.9.0.post0
