@@ -51,15 +51,15 @@ class Task(Base):
     description: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String(20), default="open")
     due_date: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    recurrence_series_id: Mapped[int] = mapped_column(
+    recurrence_series_id: Mapped[int | None] = mapped_column(
         ForeignKey("tasks.id"), nullable=True
     )
-    recurrence_pattern: Mapped[str] = mapped_column(String(20), nullable=True)
+    recurrence_pattern: Mapped[str | None] = mapped_column(String(20), nullable=True)
     recurrence_interval: Mapped[int] = mapped_column(Integer, default=1)
-    recurrence_days_of_week: Mapped[str] = mapped_column(String(20), nullable=True)
+    recurrence_days_of_week: Mapped[str | None] = mapped_column(String(20), nullable=True)
     recurrence_active: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
-    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     labels: Mapped[list[Label]] = relationship(secondary="task_labels")
 
@@ -70,5 +70,5 @@ class Reminder(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id"))
     remind_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    dismissed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
-    snoozed_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    dismissed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    snoozed_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
