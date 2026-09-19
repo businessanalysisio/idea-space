@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import text
+
 UTC = timezone.utc
 
 
@@ -41,6 +43,12 @@ def test_delete_label_removes_it_but_keeps_task(client, db_session):
     assert db_session.query(Label).filter_by(id=label.id).first() is None
     remaining_task = db_session.query(Task).filter_by(id=task.id).one()
     assert remaining_task.labels == []
+
+    # Verify no orphaned join rows remain in the raw database
+    raw_join_rows = db_session.execute(
+        text("SELECT * FROM task_labels WHERE label_id = :lid"), {"lid": label.id}
+    ).fetchall()
+    assert raw_join_rows == []
 
 
 def test_assign_label_to_task(client, db_session):

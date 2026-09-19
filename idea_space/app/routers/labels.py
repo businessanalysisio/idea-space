@@ -3,7 +3,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Label, Task
+from app.models import Label, Task, TaskLabel
 from app.seed import seed_default_workspace
 
 router = APIRouter()
@@ -48,6 +48,7 @@ def delete_label(request: Request, label_id: int, db: Session = Depends(get_db))
     if label is None:
         raise HTTPException(status_code=404, detail="Label not found")
 
+    db.query(TaskLabel).filter(TaskLabel.label_id == label_id).delete()
     db.delete(label)
     db.commit()
 
