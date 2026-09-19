@@ -1,9 +1,13 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from app.db import Base, SessionLocal, engine
+from app.routers import tasks
 from app.seed import seed_default_workspace
 
 app = FastAPI(title="Idea Space")
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.include_router(tasks.router)
 
 
 @app.on_event("startup")
