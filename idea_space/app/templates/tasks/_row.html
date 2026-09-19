@@ -10,5 +10,8 @@
       {{ "Pause" if task.recurrence_active else "Resume" }}
     </button>
   {% endif %}
+  {% for label in task.labels %}
+  <span class="label-chip" style="background-color: {{ label.color }};">{{ label.name }}</span>
+  {% endfor %}
   <button hx-post="/tasks/{{ task.id }}/complete" hx-target="#task-list" hx-swap="outerHTML">Done</button>
 </li>

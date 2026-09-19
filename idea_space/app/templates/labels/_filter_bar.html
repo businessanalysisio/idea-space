@@ -1,0 +1,5 @@
+<div id="label-filter-bar">
+  {% for label in labels %}
+  <span class="label-chip" style="background-color: {{ label.color }};">{{ label.name }}</span>
+  {% endfor %}
+</div>
