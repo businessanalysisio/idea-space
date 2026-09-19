@@ -1899,9 +1899,9 @@ Modify `idea_space/app/templates/tasks/list.html`:
 {% block content %}
 {% include "tasks/_form.html" %}
 <nav class="filter-bar">
-  {% for label in all_labels %}
-  <a href="/tasks?labels={{ label.id }}{% if status != 'open' %}&status={{ status }}{% endif %}"
-     class="label-chip{% if label.id in selected_label_ids %} label-chip--active{% endif %}"
+  {% for label in all_labels|default([]) %}
+  <a href="/tasks?labels={{ label.id }}{% if status|default('open') != 'open' %}&status={{ status }}{% endif %}"
+     class="label-chip{% if label.id in selected_label_ids|default([]) %} label-chip--active{% endif %}"
      style="background-color: {{ label.color }};">{{ label.name }}</a>
   {% endfor %}
   <a href="/tasks">Clear filters</a>
@@ -1936,6 +1936,8 @@ Expected: all PASS.
 ```
 
 Re-run: `cd idea_space && python -m pytest tests/ -v` — Expected: all PASS (this fixes `create_task`/`complete_task`/`set_recurrence_active` responses that would otherwise raise a Jinja2 `UndefinedError` on `all_labels`).
+
+**Preflight ruling (recorded in the SDD ledger):** Task 9's `assign_label` endpoint (in `routers/labels.py`) also renders `tasks/list.html` and was not in the three-call-site list above. Rather than adding a fourth call site to patch, the `list.html` snippet in Step 4 uses `|default([])` on `all_labels` and `selected_label_ids` and `|default('open')` on `status`, so any caller that omits them (including `assign_label`) renders an empty/neutral filter bar instead of raising `UndefinedError`. The three explicit call-site fixes above remain required for correct behavior (a populated, accurate filter bar) on those endpoints; `assign_label`'s filter bar will render empty until the next full `GET /tasks` — acceptable for this slice, not a crash.
 
 - [ ] **Step 6: Commit**
 
