@@ -1,22 +1,4 @@
 {% extends "base.html" %}
 {% block content %}
-{% include "tasks/_form.html" %}
-{% include "labels/_filter_bar.html" %}
-<nav class="filter-bar">
-  {% for label in all_labels|default([]) %}
-  <a href="/tasks?labels={{ label.id }}{% if status|default('open') != 'open' %}&status={{ status }}{% endif %}"
-     class="label-chip{% if label.id in selected_label_ids|default([]) %} label-chip--active{% endif %}"
-     style="background-color: {{ label.color }};">{{ label.name }}</a>
-  {% endfor %}
-  <a href="/tasks">Clear filters</a>
-</nav>
-<ul id="task-list">
-  {% if not tasks %}
-  <p>No tasks yet — add one above.</p>
-  {% else %}
-  {% for task in tasks %}
-    {% include "tasks/_row.html" %}
-  {% endfor %}
-  {% endif %}
-</ul>
+{% include "tasks/_list_fragment.html" %}
 {% endblock %}

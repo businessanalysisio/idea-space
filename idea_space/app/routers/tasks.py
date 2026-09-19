@@ -101,7 +101,7 @@ def create_task(
     all_labels = db.query(Label).order_by(Label.name.asc()).all()
     return templates.TemplateResponse(
         request,
-        "tasks/list.html",
+        "tasks/_list_fragment.html",
         {"tasks": tasks, "all_labels": all_labels, "selected_label_ids": [], "status": "open"},
     )
 
@@ -148,7 +148,7 @@ def complete_task(request: Request, task_id: int, db: Session = Depends(get_db))
     all_labels = db.query(Label).order_by(Label.name.asc()).all()
     return templates.TemplateResponse(
         request,
-        "tasks/list.html",
+        "tasks/_list_fragment.html",
         {"tasks": tasks, "all_labels": all_labels, "selected_label_ids": [], "status": "open"},
     )
 
@@ -171,7 +171,7 @@ def set_recurrence_active(
     all_labels = db.query(Label).order_by(Label.name.asc()).all()
     return templates.TemplateResponse(
         request,
-        "tasks/list.html",
+        "tasks/_list_fragment.html",
         {"tasks": tasks, "all_labels": all_labels, "selected_label_ids": [], "status": "open"},
     )
 
