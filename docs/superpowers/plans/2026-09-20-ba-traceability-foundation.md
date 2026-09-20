@@ -970,6 +970,7 @@ def delete_risk(request: Request, risk_id: int, db: Session = Depends(get_db)):
       <span>{{ risk.title }} ({{ risk.severity }}/{{ risk.likelihood }}, {{ risk.status }})</span>
       <form hx-patch="/risks/{{ risk.id }}" hx-target="#risk-manager" hx-swap="outerHTML" style="display:inline">
         <input type="text" name="title" value="{{ risk.title }}" size="12">
+        <input type="text" name="description" value="{{ risk.description }}" size="12">
         <select name="severity">
           <option value="low" {% if risk.severity == "low" %}selected{% endif %}>Low</option>
           <option value="medium" {% if risk.severity == "medium" %}selected{% endif %}>Medium</option>
@@ -985,6 +986,7 @@ def delete_risk(request: Request, risk_id: int, db: Session = Depends(get_db)):
           <option value="mitigated" {% if risk.status == "mitigated" %}selected{% endif %}>Mitigated</option>
           <option value="closed" {% if risk.status == "closed" %}selected{% endif %}>Closed</option>
         </select>
+        <input type="text" name="mitigation" value="{{ risk.mitigation or '' }}" placeholder="Mitigation" size="12">
         <button type="submit">Save</button>
       </form>
       <button hx-delete="/risks/{{ risk.id }}" hx-target="#risk-manager" hx-swap="outerHTML">Delete</button>
