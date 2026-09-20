@@ -1,0 +1,52 @@
+<div id="risk-manager">
+  <h3>Manage risks</h3>
+  <form hx-post="/risks" hx-target="#risk-manager" hx-swap="outerHTML">
+    <input type="text" name="title" placeholder="Risk title" required>
+    <input type="text" name="description" placeholder="Description">
+    <select name="severity">
+      <option value="low">Low</option>
+      <option value="medium" selected>Medium</option>
+      <option value="high">High</option>
+    </select>
+    <select name="likelihood">
+      <option value="low">Low</option>
+      <option value="medium" selected>Medium</option>
+      <option value="high">High</option>
+    </select>
+    <select name="status">
+      <option value="open" selected>Open</option>
+      <option value="mitigated">Mitigated</option>
+      <option value="closed">Closed</option>
+    </select>
+    <button type="submit">Add risk</button>
+  </form>
+  <ul class="entity-manager-list">
+    {% for risk in all_risks|default([]) %}
+    <li>
+      <span>{{ risk.title }} ({{ risk.severity }}/{{ risk.likelihood }}, {{ risk.status }})</span>
+      <form hx-patch="/risks/{{ risk.id }}" hx-target="#risk-manager" hx-swap="outerHTML" style="display:inline">
+        <input type="text" name="title" value="{{ risk.title }}" size="12">
+        <input type="text" name="description" value="{{ risk.description }}" size="12">
+        <select name="severity">
+          <option value="low" {% if risk.severity == "low" %}selected{% endif %}>Low</option>
+          <option value="medium" {% if risk.severity == "medium" %}selected{% endif %}>Medium</option>
+          <option value="high" {% if risk.severity == "high" %}selected{% endif %}>High</option>
+        </select>
+        <select name="likelihood">
+          <option value="low" {% if risk.likelihood == "low" %}selected{% endif %}>Low</option>
+          <option value="medium" {% if risk.likelihood == "medium" %}selected{% endif %}>Medium</option>
+          <option value="high" {% if risk.likelihood == "high" %}selected{% endif %}>High</option>
+        </select>
+        <select name="status">
+          <option value="open" {% if risk.status == "open" %}selected{% endif %}>Open</option>
+          <option value="mitigated" {% if risk.status == "mitigated" %}selected{% endif %}>Mitigated</option>
+          <option value="closed" {% if risk.status == "closed" %}selected{% endif %}>Closed</option>
+        </select>
+        <input type="text" name="mitigation" value="{{ risk.mitigation or '' }}" placeholder="Mitigation" size="12">
+        <button type="submit">Save</button>
+      </form>
+      <button hx-delete="/risks/{{ risk.id }}" hx-target="#risk-manager" hx-swap="outerHTML">Delete</button>
+    </li>
+    {% endfor %}
+  </ul>
+</div>

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Requirements</h2>
+<form hx-post="/requirements" hx-target="#requirement-list" hx-swap="outerHTML">
+  <input type="text" name="title" placeholder="Requirement title" required>
+  <textarea name="description" placeholder="Description"></textarea>
+  <textarea name="business_need" placeholder="Business need"></textarea>
+  <textarea name="acceptance_criteria" placeholder="Acceptance criteria"></textarea>
+  <select name="status">
+    <option value="draft">Draft</option>
+    <option value="approved">Approved</option>
+    <option value="in_progress">In Progress</option>
+    <option value="delivered">Delivered</option>
+  </select>
+  <button type="submit">Add requirement</button>
+</form>
+{% include "stakeholders/_manager.html" %}
+{% include "decisions/_manager.html" %}
+{% include "risks/_manager.html" %}
+{% include "requirements/_list_only.html" %}
+{% endblock %}

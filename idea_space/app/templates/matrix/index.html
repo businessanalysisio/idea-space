@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Traceability Matrix</h2>
+{% if not requirements %}
+<p>No requirements yet.</p>
+{% else %}
+<table class="matrix-table">
+  <thead>
+    <tr>
+      <th>Requirement</th>
+      <th>Stakeholders</th>
+      <th>Decisions</th>
+      <th>Risks</th>
+      <th>Tasks</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for requirement in requirements %}
+    <tr>
+      <td><a href="/requirements/{{ requirement.id }}">{{ requirement.title }}</a></td>
+      <td>
+        {% if requirement.stakeholders %}
+          {{ requirement.stakeholders | map(attribute='name') | join(', ') }}
+        {% else %}
+          <span class="matrix-empty">—</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if requirement.decisions %}
+          {{ requirement.decisions | map(attribute='title') | join(', ') }}
+        {% else %}
+          <span class="matrix-empty">—</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if requirement.risks %}
+          {{ requirement.risks | map(attribute='title') | join(', ') }}
+        {% else %}
+          <span class="matrix-empty">—</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if requirement.tasks %}
+          {{ requirement.tasks | map(attribute='title') | join(', ') }}
+        {% else %}
+          <span class="matrix-empty">—</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

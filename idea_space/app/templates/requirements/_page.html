@@ -1,0 +1,85 @@
+<div id="requirement-page">
+  <h2>{{ requirement.title }}</h2>
+  <form hx-patch="/requirements/{{ requirement.id }}" hx-target="#requirement-page" hx-swap="outerHTML">
+    <input type="text" name="title" value="{{ requirement.title }}" required>
+    <textarea name="description">{{ requirement.description }}</textarea>
+    <textarea name="business_need">{{ requirement.business_need }}</textarea>
+    <textarea name="acceptance_criteria">{{ requirement.acceptance_criteria }}</textarea>
+    <select name="status">
+      <option value="draft" {% if requirement.status == "draft" %}selected{% endif %}>Draft</option>
+      <option value="approved" {% if requirement.status == "approved" %}selected{% endif %}>Approved</option>
+      <option value="in_progress" {% if requirement.status == "in_progress" %}selected{% endif %}>In Progress</option>
+      <option value="delivered" {% if requirement.status == "delivered" %}selected{% endif %}>Delivered</option>
+    </select>
+    <button type="submit">Save</button>
+  </form>
+  <button hx-delete="/requirements/{{ requirement.id }}">Delete requirement</button>
+
+  <section>
+    <h3>Stakeholders</h3>
+    <ul>
+      {% for stakeholder in requirement.stakeholders %}
+      <li>{{ stakeholder.name }} ({{ stakeholder.role }}) <button hx-delete="/requirements/{{ requirement.id }}/stakeholders/{{ stakeholder.id }}" hx-target="#requirement-page" hx-swap="outerHTML">Remove</button></li>
+      {% endfor %}
+    </ul>
+    <form hx-post="/requirements/{{ requirement.id }}/stakeholders" hx-target="#requirement-page" hx-swap="outerHTML">
+      <select name="stakeholder_id">
+        {% for stakeholder in all_stakeholders %}
+        <option value="{{ stakeholder.id }}">{{ stakeholder.name }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Link stakeholder</button>
+    </form>
+  </section>
+
+  <section>
+    <h3>Decisions</h3>
+    <ul>
+      {% for decision in requirement.decisions %}
+      <li>{{ decision.title }} <button hx-delete="/requirements/{{ requirement.id }}/decisions/{{ decision.id }}" hx-target="#requirement-page" hx-swap="outerHTML">Remove</button></li>
+      {% endfor %}
+    </ul>
+    <form hx-post="/requirements/{{ requirement.id }}/decisions" hx-target="#requirement-page" hx-swap="outerHTML">
+      <select name="decision_id">
+        {% for decision in all_decisions %}
+        <option value="{{ decision.id }}">{{ decision.title }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Link decision</button>
+    </form>
+  </section>
+
+  <section>
+    <h3>Risks</h3>
+    <ul>
+      {% for risk in requirement.risks %}
+      <li>{{ risk.title }} ({{ risk.severity }}/{{ risk.likelihood }}) <button hx-delete="/requirements/{{ requirement.id }}/risks/{{ risk.id }}" hx-target="#requirement-page" hx-swap="outerHTML">Remove</button></li>
+      {% endfor %}
+    </ul>
+    <form hx-post="/requirements/{{ requirement.id }}/risks" hx-target="#requirement-page" hx-swap="outerHTML">
+      <select name="risk_id">
+        {% for risk in all_risks %}
+        <option value="{{ risk.id }}">{{ risk.title }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Link risk</button>
+    </form>
+  </section>
+
+  <section>
+    <h3>Tasks</h3>
+    <ul>
+      {% for task in requirement.tasks %}
+      <li>{{ task.title }} <button hx-delete="/requirements/{{ requirement.id }}/tasks/{{ task.id }}" hx-target="#requirement-page" hx-swap="outerHTML">Remove</button></li>
+      {% endfor %}
+    </ul>
+    <form hx-post="/requirements/{{ requirement.id }}/tasks" hx-target="#requirement-page" hx-swap="outerHTML">
+      <select name="task_id">
+        {% for task in all_tasks %}
+        <option value="{{ task.id }}">{{ task.title }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Link task</button>
+    </form>
+  </section>
+</div>

@@ -7,7 +7,15 @@
   <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
-  <header class="app-header"><h1>Idea Space</h1></header>
+  <header class="app-header">
+    <h1>Idea Space</h1>
+    <nav class="main-nav">
+      <a href="/tasks">Tasks</a>
+      <a href="/calendar">Calendar</a>
+      <a href="/requirements">Requirements</a>
+      <a href="/matrix">Matrix</a>
+    </nav>
+  </header>
   <div hx-get="/reminders/due" hx-trigger="load" hx-swap="outerHTML" id="reminder-banner"></div>
   <main>{% block content %}{% endblock %}</main>
   <script src="/static/app.js"></script>
