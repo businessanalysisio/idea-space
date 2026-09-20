@@ -327,3 +327,48 @@ def test_reschedule_logs_due_date_change(client, db_session):
     entry = db_session.query(ActivityLog).filter_by(task_id=task.id, field_name="due_date").one()
     assert entry.old_value == "2026-09-22"
     assert entry.new_value == "2026-09-24"
+
+
+def test_archive_requires_done_status(client, db_session):
+    from app.models import Task
+
+    due = (datetime.now(UTC) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+    client.post("/tasks", data={"title": "Draft outline", "due_date": due})
+    task = db_session.query(Task).filter_by(title="Draft outline").one()
+
+    response = client.post(f"/tasks/{task.id}/archive")
+    assert response.status_code == 404
+
+
+def test_archive_moves_task_from_done_to_archived_view(client, db_session):
+    from app.models import ActivityLog, Task
+
+    due = (datetime.now(UTC) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+    client.post("/tasks", data={"title": "Draft outline", "due_date": due})
+    task = db_session.query(Task).filter_by(title="Draft outline").one()
+    client.post(f"/tasks/{task.id}/complete")
+
+    response = client.post(f"/tasks/{task.id}/archive")
+    assert response.status_code == 200
+    assert b"Draft outline" not in response.content
+
+    db_session.refresh(task)
+    assert task.status == "archived"
+
+    entry = (
+        db_session.query(ActivityLog)
+        .filter_by(task_id=task.id, field_name="status", new_value="archived")
+        .one()
+    )
+    assert entry.old_value == "done"
+
+    done_view = client.get("/tasks?status=done")
+    assert b"Draft outline" not in done_view.content
+
+    archived_view = client.get("/tasks?status=archived")
+    assert b"Draft outline" in archived_view.content
+
+
+def test_list_tasks_rejects_invalid_status(client):
+    response = client.get("/tasks?status=banana")
+    assert response.status_code == 400

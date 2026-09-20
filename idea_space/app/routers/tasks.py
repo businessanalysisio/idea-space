@@ -14,6 +14,8 @@ from app.services.recurrence import compute_next_due_date
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
+VALID_STATUSES = {"open", "done", "archived"}
+
 
 def _attach_overdue_flag(tasks: list[Task]) -> list[Task]:
     now = datetime.now(timezone.utc)
@@ -44,6 +46,9 @@ def list_tasks(
     status: str = "open",
     db: Session = Depends(get_db),
 ):
+    if status not in VALID_STATUSES:
+        raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
+
     label_ids = [int(x) for x in labels.split(",")] if labels else None
     tasks = _filtered_tasks(db, label_ids, status)
     all_labels = db.query(Label).order_by(Label.name.asc()).all()
@@ -153,6 +158,25 @@ def complete_task(
             db.commit()
 
     tasks = _open_tasks(db)
+    all_labels = db.query(Label).order_by(Label.name.asc()).all()
+    return templates.TemplateResponse(
+        request,
+        "tasks/_task_list_only.html",
+        {"tasks": tasks, "all_labels": all_labels},
+    )
+
+
+@router.post("/tasks/{task_id}/archive")
+def archive_task(request: Request, task_id: int, db: Session = Depends(get_db)):
+    task = db.get(Task, task_id)
+    if task is None or task.status != "done":
+        raise HTTPException(status_code=404, detail="Task not found or not done")
+
+    record_change(db, task, "status", "done", "archived")
+    task.status = "archived"
+    db.commit()
+
+    tasks = _filtered_tasks(db, None, "done")
     all_labels = db.query(Label).order_by(Label.name.asc()).all()
     return templates.TemplateResponse(
         request,

@@ -24,4 +24,7 @@
   </form>
   {% endif %}
   <button hx-post="/tasks/{{ task.id }}/complete" hx-target="#task-list" hx-swap="outerHTML">Done</button>
+  {% if task.status == "done" %}
+  <button hx-post="/tasks/{{ task.id }}/archive" hx-target="#task-list" hx-swap="outerHTML">Archive</button>
+  {% endif %}
 </li>
