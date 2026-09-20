@@ -3,7 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from app.db import Base, SessionLocal, engine
-from app.routers import calendar, decisions, labels, reminders, stakeholders, tasks
+from app.routers import calendar, decisions, labels, reminders, risks, stakeholders, tasks
 from app.seed import seed_default_workspace
 
 app = FastAPI(title="Idea Space")
@@ -14,6 +14,7 @@ app.include_router(calendar.router)
 app.include_router(reminders.router)
 app.include_router(stakeholders.router)
 app.include_router(decisions.router)
+app.include_router(risks.router)
 
 
 def ensure_completion_note_column(target_engine) -> None:
