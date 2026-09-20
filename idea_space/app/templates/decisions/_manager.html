@@ -1,0 +1,25 @@
+<div id="decision-manager">
+  <h3>Manage decisions</h3>
+  <form hx-post="/decisions" hx-target="#decision-manager" hx-swap="outerHTML">
+    <input type="text" name="title" placeholder="Decision title" required>
+    <input type="text" name="rationale" placeholder="Rationale">
+    <input type="date" name="decided_at" required>
+    <input type="text" name="decided_by" placeholder="Decided by" required>
+    <button type="submit">Add decision</button>
+  </form>
+  <ul class="entity-manager-list">
+    {% for decision in all_decisions|default([]) %}
+    <li>
+      <span>{{ decision.title }} — {{ decision.decided_at }} by {{ decision.decided_by }}</span>
+      <form hx-patch="/decisions/{{ decision.id }}" hx-target="#decision-manager" hx-swap="outerHTML" style="display:inline">
+        <input type="text" name="title" value="{{ decision.title }}" size="12">
+        <input type="text" name="rationale" value="{{ decision.rationale }}" size="12">
+        <input type="date" name="decided_at" value="{{ decision.decided_at }}">
+        <input type="text" name="decided_by" value="{{ decision.decided_by }}" size="10">
+        <button type="submit">Save</button>
+      </form>
+      <button hx-delete="/decisions/{{ decision.id }}" hx-target="#decision-manager" hx-swap="outerHTML">Delete</button>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
