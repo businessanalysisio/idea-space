@@ -123,6 +123,7 @@ button[type="submit"]:hover {
 
 form {
   display: inline-flex;
+  flex-wrap: wrap;
   gap: var(--space-xs);
   align-items: center;
   margin: 0 var(--space-xs) var(--space-xs) 0;
