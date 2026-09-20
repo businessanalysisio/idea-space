@@ -25,12 +25,17 @@ def create_decision(
     decided_by: str = Form(...),
     db: Session = Depends(get_db),
 ):
+    try:
+        parsed_decided_at = date_type.fromisoformat(decided_at)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid date: {decided_at}")
+
     workspace, _ = seed_default_workspace(db)
     decision = Decision(
         workspace_id=workspace.id,
         title=title,
         rationale=rationale,
-        decided_at=date_type.fromisoformat(decided_at),
+        decided_at=parsed_decided_at,
         decided_by=decided_by,
     )
     db.add(decision)
@@ -55,9 +60,14 @@ def edit_decision(
     if decision is None:
         raise HTTPException(status_code=404, detail="Decision not found")
 
+    try:
+        parsed_decided_at = date_type.fromisoformat(decided_at)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid date: {decided_at}")
+
     decision.title = title
     decision.rationale = rationale
-    decision.decided_at = date_type.fromisoformat(decided_at)
+    decision.decided_at = parsed_decided_at
     decision.decided_by = decided_by
     db.commit()
 

@@ -216,3 +216,75 @@ def link_task(
     return templates.TemplateResponse(
         request, "requirements/_page.html", _requirement_page_context(db, requirement)
     )
+
+
+@router.delete("/requirements/{requirement_id}/stakeholders/{stakeholder_id}")
+def unlink_stakeholder(
+    request: Request, requirement_id: int, stakeholder_id: int, db: Session = Depends(get_db)
+):
+    requirement = db.get(Requirement, requirement_id)
+    stakeholder = db.get(Stakeholder, stakeholder_id)
+    if requirement is None or stakeholder is None:
+        raise HTTPException(status_code=404, detail="Requirement or stakeholder not found")
+
+    if stakeholder in requirement.stakeholders:
+        requirement.stakeholders.remove(stakeholder)
+        db.commit()
+
+    return templates.TemplateResponse(
+        request, "requirements/_page.html", _requirement_page_context(db, requirement)
+    )
+
+
+@router.delete("/requirements/{requirement_id}/decisions/{decision_id}")
+def unlink_decision(
+    request: Request, requirement_id: int, decision_id: int, db: Session = Depends(get_db)
+):
+    requirement = db.get(Requirement, requirement_id)
+    decision = db.get(Decision, decision_id)
+    if requirement is None or decision is None:
+        raise HTTPException(status_code=404, detail="Requirement or decision not found")
+
+    if decision in requirement.decisions:
+        requirement.decisions.remove(decision)
+        db.commit()
+
+    return templates.TemplateResponse(
+        request, "requirements/_page.html", _requirement_page_context(db, requirement)
+    )
+
+
+@router.delete("/requirements/{requirement_id}/risks/{risk_id}")
+def unlink_risk(
+    request: Request, requirement_id: int, risk_id: int, db: Session = Depends(get_db)
+):
+    requirement = db.get(Requirement, requirement_id)
+    risk = db.get(Risk, risk_id)
+    if requirement is None or risk is None:
+        raise HTTPException(status_code=404, detail="Requirement or risk not found")
+
+    if risk in requirement.risks:
+        requirement.risks.remove(risk)
+        db.commit()
+
+    return templates.TemplateResponse(
+        request, "requirements/_page.html", _requirement_page_context(db, requirement)
+    )
+
+
+@router.delete("/requirements/{requirement_id}/tasks/{task_id}")
+def unlink_task(
+    request: Request, requirement_id: int, task_id: int, db: Session = Depends(get_db)
+):
+    requirement = db.get(Requirement, requirement_id)
+    task = db.get(Task, task_id)
+    if requirement is None or task is None:
+        raise HTTPException(status_code=404, detail="Requirement or task not found")
+
+    if task in requirement.tasks:
+        requirement.tasks.remove(task)
+        db.commit()
+
+    return templates.TemplateResponse(
+        request, "requirements/_page.html", _requirement_page_context(db, requirement)
+    )

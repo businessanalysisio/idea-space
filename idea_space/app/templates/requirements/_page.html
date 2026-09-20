@@ -19,7 +19,7 @@
     <h3>Stakeholders</h3>
     <ul>
       {% for stakeholder in requirement.stakeholders %}
-      <li>{{ stakeholder.name }} ({{ stakeholder.role }})</li>
+      <li>{{ stakeholder.name }} ({{ stakeholder.role }}) <button hx-delete="/requirements/{{ requirement.id }}/stakeholders/{{ stakeholder.id }}" hx-target="#requirement-page" hx-swap="outerHTML">Remove</button></li>
       {% endfor %}
     </ul>
     <form hx-post="/requirements/{{ requirement.id }}/stakeholders" hx-target="#requirement-page" hx-swap="outerHTML">
@@ -36,7 +36,7 @@
     <h3>Decisions</h3>
     <ul>
       {% for decision in requirement.decisions %}
-      <li>{{ decision.title }}</li>
+      <li>{{ decision.title }} <button hx-delete="/requirements/{{ requirement.id }}/decisions/{{ decision.id }}" hx-target="#requirement-page" hx-swap="outerHTML">Remove</button></li>
       {% endfor %}
     </ul>
     <form hx-post="/requirements/{{ requirement.id }}/decisions" hx-target="#requirement-page" hx-swap="outerHTML">
@@ -53,7 +53,7 @@
     <h3>Risks</h3>
     <ul>
       {% for risk in requirement.risks %}
-      <li>{{ risk.title }} ({{ risk.severity }}/{{ risk.likelihood }})</li>
+      <li>{{ risk.title }} ({{ risk.severity }}/{{ risk.likelihood }}) <button hx-delete="/requirements/{{ requirement.id }}/risks/{{ risk.id }}" hx-target="#requirement-page" hx-swap="outerHTML">Remove</button></li>
       {% endfor %}
     </ul>
     <form hx-post="/requirements/{{ requirement.id }}/risks" hx-target="#requirement-page" hx-swap="outerHTML">
@@ -70,7 +70,7 @@
     <h3>Tasks</h3>
     <ul>
       {% for task in requirement.tasks %}
-      <li>{{ task.title }}</li>
+      <li>{{ task.title }} <button hx-delete="/requirements/{{ requirement.id }}/tasks/{{ task.id }}" hx-target="#requirement-page" hx-swap="outerHTML">Remove</button></li>
       {% endfor %}
     </ul>
     <form hx-post="/requirements/{{ requirement.id }}/tasks" hx-target="#requirement-page" hx-swap="outerHTML">

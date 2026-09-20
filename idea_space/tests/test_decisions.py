@@ -66,3 +66,27 @@ def test_delete_decision_removes_junction_rows(client, db_session):
         db_session.query(RequirementDecision).filter_by(decision_id=decision.id).all()
     )
     assert remaining == []
+
+
+def test_create_decision_rejects_invalid_date(client):
+    response = client.post(
+        "/decisions",
+        data={"title": "Bad decision", "rationale": "", "decided_at": "not-a-date", "decided_by": "Jane"},
+    )
+    assert response.status_code == 400
+
+
+def test_edit_decision_rejects_empty_date(client, db_session):
+    from app.models import Decision
+
+    client.post(
+        "/decisions",
+        data={"title": "Use SSO", "rationale": "", "decided_at": "2026-09-20", "decided_by": "Jane"},
+    )
+    decision = db_session.query(Decision).filter_by(title="Use SSO").one()
+
+    response = client.patch(
+        f"/decisions/{decision.id}",
+        data={"title": "Use SSO", "rationale": "", "decided_at": "", "decided_by": "Jane"},
+    )
+    assert response.status_code == 400

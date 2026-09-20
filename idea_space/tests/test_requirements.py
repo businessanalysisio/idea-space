@@ -234,3 +234,116 @@ def test_link_stakeholder_unknown_requirement_returns_404(client, db_session):
 
     response = client.post("/requirements/999/stakeholders", data={"stakeholder_id": stakeholder.id})
     assert response.status_code == 404
+
+
+def test_unlink_stakeholder(client, db_session):
+    from app.models import Requirement, Stakeholder
+    from app.seed import seed_default_workspace
+
+    workspace, user = seed_default_workspace(db_session)
+    requirement = Requirement(workspace_id=workspace.id, owner_id=user.id, title="Req 1")
+    stakeholder = Stakeholder(workspace_id=workspace.id, name="Jane", role="Sponsor")
+    db_session.add_all([requirement, stakeholder])
+    db_session.commit()
+    requirement.stakeholders.append(stakeholder)
+    db_session.commit()
+
+    response = client.delete(f"/requirements/{requirement.id}/stakeholders/{stakeholder.id}")
+    assert response.status_code == 200
+    # "Jane" alone would also match the still-present "Link stakeholder" dropdown
+    # option (all_stakeholders is independent of the link), so check for the
+    # specific linked-item rendering instead.
+    assert b"Jane (Sponsor)" not in response.content
+
+    db_session.refresh(requirement)
+    assert requirement.stakeholders == []
+
+
+def test_unlink_decision(client, db_session):
+    from datetime import date
+
+    from app.models import Decision, Requirement
+    from app.seed import seed_default_workspace
+
+    workspace, user = seed_default_workspace(db_session)
+    requirement = Requirement(workspace_id=workspace.id, owner_id=user.id, title="Req 1")
+    decision = Decision(
+        workspace_id=workspace.id, title="Dec 1", rationale="", decided_at=date(2026, 9, 20), decided_by="Jane"
+    )
+    db_session.add_all([requirement, decision])
+    db_session.commit()
+    requirement.decisions.append(decision)
+    db_session.commit()
+
+    response = client.delete(f"/requirements/{requirement.id}/decisions/{decision.id}")
+    assert response.status_code == 200
+
+    db_session.refresh(requirement)
+    assert requirement.decisions == []
+
+
+def test_unlink_risk(client, db_session):
+    from app.models import Requirement, Risk
+    from app.seed import seed_default_workspace
+
+    workspace, user = seed_default_workspace(db_session)
+    requirement = Requirement(workspace_id=workspace.id, owner_id=user.id, title="Req 1")
+    risk = Risk(workspace_id=workspace.id, title="Risk 1", description="")
+    db_session.add_all([requirement, risk])
+    db_session.commit()
+    requirement.risks.append(risk)
+    db_session.commit()
+
+    response = client.delete(f"/requirements/{requirement.id}/risks/{risk.id}")
+    assert response.status_code == 200
+
+    db_session.refresh(requirement)
+    assert requirement.risks == []
+
+
+def test_unlink_task(client, db_session):
+    from datetime import datetime, timezone
+
+    from app.models import Requirement, Task
+    from app.seed import seed_default_workspace
+
+    UTC = timezone.utc
+    workspace, user = seed_default_workspace(db_session)
+    requirement = Requirement(workspace_id=workspace.id, owner_id=user.id, title="Req 1")
+    task = Task(
+        workspace_id=workspace.id, owner_id=user.id, title="Task 1", due_date=datetime(2026, 9, 25, tzinfo=UTC)
+    )
+    db_session.add_all([requirement, task])
+    db_session.commit()
+    requirement.tasks.append(task)
+    db_session.commit()
+
+    response = client.delete(f"/requirements/{requirement.id}/tasks/{task.id}")
+    assert response.status_code == 200
+
+    db_session.refresh(requirement)
+    assert requirement.tasks == []
+
+
+def test_unlink_stakeholder_unknown_requirement_returns_404(client, db_session):
+    from app.models import Stakeholder
+
+    client.post("/stakeholders", data={"name": "Jane Sponsor", "role": "Sponsor"})
+    stakeholder = db_session.query(Stakeholder).filter_by(name="Jane Sponsor").one()
+
+    response = client.delete(f"/requirements/999/stakeholders/{stakeholder.id}")
+    assert response.status_code == 404
+
+
+def test_unlink_stakeholder_is_safe_when_not_linked(client, db_session):
+    from app.models import Requirement, Stakeholder
+    from app.seed import seed_default_workspace
+
+    workspace, user = seed_default_workspace(db_session)
+    requirement = Requirement(workspace_id=workspace.id, owner_id=user.id, title="Req 1")
+    stakeholder = Stakeholder(workspace_id=workspace.id, name="Jane", role="Sponsor")
+    db_session.add_all([requirement, stakeholder])
+    db_session.commit()
+
+    response = client.delete(f"/requirements/{requirement.id}/stakeholders/{stakeholder.id}")
+    assert response.status_code == 200
