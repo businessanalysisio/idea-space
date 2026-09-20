@@ -192,3 +192,9 @@ def test_ensure_redesign_columns_skips_non_sqlite_dialects(monkeypatch):
     ensure_redesign_columns(engine)
 
     assert connected["value"] is False
+
+
+def test_root_redirects_to_tasks(client):
+    response = client.get("/", follow_redirects=False)
+    assert response.status_code in (302, 307)
+    assert response.headers["location"] == "/tasks"
