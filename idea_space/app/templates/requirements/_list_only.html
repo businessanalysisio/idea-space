@@ -1,0 +1,9 @@
+<ul id="requirement-list">
+  {% if not requirements %}
+  <p>No requirements yet — add one above.</p>
+  {% else %}
+  {% for requirement in requirements %}
+    {% include "requirements/_row.html" %}
+  {% endfor %}
+  {% endif %}
+</ul>
