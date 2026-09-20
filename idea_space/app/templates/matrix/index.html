@@ -1,54 +1,105 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Traceability Matrix</h2>
-{% if not requirements %}
-<p>No requirements yet.</p>
-{% else %}
-<table class="matrix-table">
-  <thead>
-    <tr>
-      <th>Requirement</th>
-      <th>Stakeholders</th>
-      <th>Decisions</th>
-      <th>Risks</th>
-      <th>Tasks</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for requirement in requirements %}
-    <tr>
-      <td><a href="/requirements/{{ requirement.id }}">{{ requirement.title }}</a></td>
-      <td>
-        {% if requirement.stakeholders %}
-          {{ requirement.stakeholders | map(attribute='name') | join(', ') }}
-        {% else %}
-          <span class="matrix-empty">—</span>
-        {% endif %}
-      </td>
-      <td>
-        {% if requirement.decisions %}
-          {{ requirement.decisions | map(attribute='title') | join(', ') }}
-        {% else %}
-          <span class="matrix-empty">—</span>
-        {% endif %}
-      </td>
-      <td>
-        {% if requirement.risks %}
-          {{ requirement.risks | map(attribute='title') | join(', ') }}
-        {% else %}
-          <span class="matrix-empty">—</span>
-        {% endif %}
-      </td>
-      <td>
-        {% if requirement.tasks %}
-          {{ requirement.tasks | map(attribute='title') | join(', ') }}
-        {% else %}
-          <span class="matrix-empty">—</span>
-        {% endif %}
-      </td>
-    </tr>
+<div class="page-header">
+  <div>
+    <div class="page-eyebrow">EVIDENCE MAP</div>
+    <div class="page-title">Traceability matrix</div>
+    <div class="page-subtitle">See how every requirement connects to delivery and proof.</div>
+  </div>
+  <a class="btn btn-outline" href="/matrix">SYNC MATRIX</a>
+</div>
+
+<div class="metrics-row">
+  <div class="metric-card">
+    <span class="metric-label">COVERAGE</span>
+    <div class="metric-value-row">
+      <span class="metric-value" style="color: var(--success);">{{ coverage_pct }}%</span>
+    </div>
+  </div>
+  <div class="metric-card">
+    <span class="metric-label">REQUIREMENTS</span>
+    <div class="metric-value-row">
+      <span class="metric-value">{{ total_count }}</span>
+      <span class="metric-note">{{ connected_count }} connected</span>
+    </div>
+  </div>
+  <div class="metric-card">
+    <span class="metric-label">ORPHANED</span>
+    <div class="metric-value-row">
+      <span class="metric-value" style="color: var(--warning);">{{ "%02d"|format(orphaned_count) }}</span>
+      <span class="metric-note metric-note--warning">Needs linkage</span>
+    </div>
+  </div>
+  <div class="metric-card">
+    <span class="metric-label">VERIFIED</span>
+    <div class="metric-value-row">
+      <span class="metric-value" style="color: var(--accent);">{{ "%02d"|format(verified_count) }}</span>
+      <span class="metric-note">Acceptance passed</span>
+    </div>
+  </div>
+</div>
+
+<div class="matrix-layout">
+  {% if not rows %}
+  <div class="requirements-table"><p class="agenda-empty" style="padding:20px;">No requirements yet.</p></div>
+  {% else %}
+  <table class="matrix-table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>REQUIREMENT</th>
+        <th>TASKS</th>
+        <th>DECISIONS</th>
+        <th>RISKS</th>
+        <th>STAKEHOLDERS</th>
+        <th>STATUS</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td style="color: var(--accent); font-weight:700;">REQ-{{ "%03d"|format(row.requirement.id) }}</td>
+        <td><a href="/requirements/{{ row.requirement.id }}" style="text-decoration:none;">{{ row.requirement.title }}</a></td>
+        <td><span class="link-badge link-badge--{{ row.task_tier }}">{{ row.requirement.tasks|length }}</span></td>
+        <td><span class="link-badge link-badge--{{ row.decision_tier }}">{{ row.requirement.decisions|length }}</span></td>
+        <td><span class="link-badge link-badge--{{ row.risk_tier }}">{{ row.requirement.risks|length }}</span></td>
+        <td><span class="link-badge link-badge--{{ row.stakeholder_tier }}">{{ row.requirement.stakeholders|length }}</span></td>
+        <td>
+          {% if row.status == "at_risk" %}
+          <span class="status-badge status-badge--danger">AT RISK</span>
+          {% elif row.status == "verified" %}
+          <span class="status-badge status-badge--success">VERIFIED</span>
+          {% elif row.status == "partial" %}
+          <span class="status-badge status-badge--warning">PARTIAL</span>
+          {% else %}
+          <span class="status-badge status-badge--neutral">DRAFT</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+  <div class="coverage-panel">
+    <div class="page-eyebrow">COVERAGE SIGNAL</div>
+    <div style="font-size:20px; font-weight:600;">Close the final gaps</div>
+    <div class="coverage-ring-area">
+      <div class="coverage-ring" style="--pct: {{ coverage_pct }};"></div>
+      <div class="coverage-ring-value">{{ coverage_pct }}% COVERED</div>
+    </div>
+    <div style="font-size:8px; font-weight:700; color: var(--text-muted);">NEEDS ATTENTION</div>
+    {% if not needs_attention %}
+    <p class="agenda-empty">Nothing needs attention.</p>
+    {% endif %}
+    {% for item in needs_attention %}
+    <div class="attention-item">
+      <span class="attention-dot" style="background: {{ 'var(--danger)' if item.status == 'at_risk' else 'var(--warning)' }};"></span>
+      <div class="attention-detail">
+        <span class="attention-id" style="color: {{ 'var(--danger)' if item.status == 'at_risk' else 'var(--warning)' }};">REQ-{{ "%03d"|format(item.requirement.id) }}</span>
+        <span class="attention-text">{{ item.requirement.title }} — {{ item.reason }}</span>
+      </div>
+    </div>
     {% endfor %}
-  </tbody>
-</table>
-{% endif %}
+  </div>
+</div>
 {% endblock %}
