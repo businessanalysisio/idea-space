@@ -1,0 +1,23 @@
+<div id="stakeholder-manager">
+  <h3>Manage stakeholders</h3>
+  <form hx-post="/stakeholders" hx-target="#stakeholder-manager" hx-swap="outerHTML">
+    <input type="text" name="name" placeholder="Name" required>
+    <input type="text" name="role" placeholder="Role" required>
+    <input type="text" name="contact_info" placeholder="Contact info (optional)">
+    <button type="submit">Add stakeholder</button>
+  </form>
+  <ul class="entity-manager-list">
+    {% for stakeholder in all_stakeholders|default([]) %}
+    <li>
+      <span>{{ stakeholder.name }} ({{ stakeholder.role }})</span>
+      <form hx-patch="/stakeholders/{{ stakeholder.id }}" hx-target="#stakeholder-manager" hx-swap="outerHTML" style="display:inline">
+        <input type="text" name="name" value="{{ stakeholder.name }}" size="12">
+        <input type="text" name="role" value="{{ stakeholder.role }}" size="10">
+        <input type="text" name="contact_info" value="{{ stakeholder.contact_info or '' }}" size="12">
+        <button type="submit">Save</button>
+      </form>
+      <button hx-delete="/stakeholders/{{ stakeholder.id }}" hx-target="#stakeholder-manager" hx-swap="outerHTML">Delete</button>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
