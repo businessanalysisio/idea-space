@@ -64,3 +64,36 @@ def test_delete_risk_removes_junction_rows(client, db_session):
     assert db_session.query(Risk).filter_by(id=risk.id).first() is None
     remaining = db_session.query(RequirementRisk).filter_by(risk_id=risk.id).all()
     assert remaining == []
+
+
+def test_edit_risk_preserves_description_and_mitigation(client, db_session):
+    from app.models import Risk
+
+    client.post(
+        "/risks",
+        data={
+            "title": "Vendor risk",
+            "description": "Original description",
+            "severity": "high",
+            "likelihood": "medium",
+            "mitigation": "Original mitigation",
+        },
+    )
+    risk = db_session.query(Risk).filter_by(title="Vendor risk").one()
+
+    # Simulate submitting the rendered edit form: re-send the current field values unchanged.
+    client.patch(
+        f"/risks/{risk.id}",
+        data={
+            "title": risk.title,
+            "description": risk.description,
+            "severity": risk.severity,
+            "likelihood": risk.likelihood,
+            "status": risk.status,
+            "mitigation": risk.mitigation,
+        },
+    )
+
+    db_session.refresh(risk)
+    assert risk.description == "Original description"
+    assert risk.mitigation == "Original mitigation"
