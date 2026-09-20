@@ -116,4 +116,46 @@ def test_startup_adds_redesign_columns_to_existing_tables(tmp_path):
     # Idempotent: running again against an already-migrated db is a no-op.
     ensure_redesign_columns(old_engine)
 
-    old_engine.dispose()
+
+def test_ensure_completion_note_column_skips_non_sqlite_dialects(monkeypatch):
+    from sqlalchemy import create_engine
+
+    from app.main import ensure_completion_note_column
+
+    engine = create_engine("sqlite:///:memory:")
+    monkeypatch.setattr(engine.dialect, "name", "postgresql")
+
+    connected = {"value": False}
+    original_connect = engine.connect
+
+    def spy_connect(*args, **kwargs):
+        connected["value"] = True
+        return original_connect(*args, **kwargs)
+
+    monkeypatch.setattr(engine, "connect", spy_connect)
+
+    ensure_completion_note_column(engine)
+
+    assert connected["value"] is False
+
+
+def test_ensure_redesign_columns_skips_non_sqlite_dialects(monkeypatch):
+    from sqlalchemy import create_engine
+
+    from app.main import ensure_redesign_columns
+
+    engine = create_engine("sqlite:///:memory:")
+    monkeypatch.setattr(engine.dialect, "name", "postgresql")
+
+    connected = {"value": False}
+    original_connect = engine.connect
+
+    def spy_connect(*args, **kwargs):
+        connected["value"] = True
+        return original_connect(*args, **kwargs)
+
+    monkeypatch.setattr(engine, "connect", spy_connect)
+
+    ensure_redesign_columns(engine)
+
+    assert connected["value"] is False
