@@ -60,6 +60,7 @@ class Task(Base):
     recurrence_active: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completion_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     labels: Mapped[list[Label]] = relationship(secondary="task_labels")
 
@@ -74,3 +75,15 @@ class Reminder(Base):
     snoozed_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     task: Mapped["Task"] = relationship()
+
+
+class ActivityLog(Base):
+    __tablename__ = "activity_log"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    workspace_id: Mapped[int] = mapped_column(ForeignKey("workspaces.id"))
+    task_id: Mapped[int] = mapped_column(ForeignKey("tasks.id"))
+    field_name: Mapped[str] = mapped_column(String(50))
+    old_value: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    new_value: Mapped[str] = mapped_column(String(255))
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
