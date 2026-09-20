@@ -90,3 +90,21 @@ def test_completed_task_suppresses_its_reminder(client, db_session):
 
     response = client.get("/reminders/due")
     assert b"Prep steering deck" not in response.content
+
+
+def test_due_reminders_excludes_archived_task(client, db_session):
+    from app.models import Reminder, Task
+
+    due = (datetime.now(UTC) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+    client.post("/tasks", data={"title": "Old task", "due_date": due})
+    task = db_session.query(Task).filter_by(title="Old task").one()
+
+    reminder = Reminder(task_id=task.id, remind_at=datetime.now(UTC) - timedelta(minutes=5))
+    db_session.add(reminder)
+    db_session.commit()
+
+    client.post(f"/tasks/{task.id}/complete")
+    client.post(f"/tasks/{task.id}/archive")
+
+    response = client.get("/reminders/due")
+    assert b"Old task" not in response.content

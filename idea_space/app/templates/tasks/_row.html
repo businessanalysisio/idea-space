@@ -23,10 +23,15 @@
     <button type="submit">Add label</button>
   </form>
   {% endif %}
-  <button hx-post="/tasks/{{ task.id }}/complete" hx-target="#task-list" hx-swap="outerHTML">Done</button>
+  {% if task.status == "open" %}
+  <form hx-post="/tasks/{{ task.id }}/complete" hx-target="#task-list" hx-swap="outerHTML" style="display:inline">
+    <input type="text" name="completion_note" placeholder="Completion note (optional)">
+    <button type="submit">Done</button>
+  </form>
+  {% endif %}
   {% if task.status == "done" %}
   <button hx-post="/tasks/{{ task.id }}/archive" hx-target="#task-list" hx-swap="outerHTML">Archive</button>
   {% endif %}
-  <button hx-get="/tasks/{{ task.id }}/history" hx-target="#history-{{ task.id }}" hx-swap="innerHTML">History</button>
+  <button hx-get="/tasks/{{ task.id }}/history" hx-target="#history-{{ task.id }}" hx-swap="outerHTML">History</button>
   <div id="history-{{ task.id }}" class="task-history"></div>
 </li>

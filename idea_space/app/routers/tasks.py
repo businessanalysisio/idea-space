@@ -120,8 +120,8 @@ def complete_task(
     db: Session = Depends(get_db),
 ):
     task = db.get(Task, task_id)
-    if task is None:
-        raise HTTPException(status_code=404, detail="Task not found")
+    if task is None or task.status != "open":
+        raise HTTPException(status_code=404, detail="Task not found or not open")
 
     record_change(db, task, "status", task.status, "done")
     task.status = "done"
@@ -194,7 +194,7 @@ def task_history(request: Request, task_id: int, db: Session = Depends(get_db)):
     entries = (
         db.query(ActivityLog)
         .filter(ActivityLog.task_id == task_id)
-        .order_by(ActivityLog.changed_at.desc())
+        .order_by(ActivityLog.changed_at.desc(), ActivityLog.id.desc())
         .all()
     )
     return templates.TemplateResponse(

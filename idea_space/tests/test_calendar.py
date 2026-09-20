@@ -43,3 +43,16 @@ def test_calendar_week_lists_overdue_tasks_from_before_the_range(client):
     response = client.get("/calendar?start=2026-09-21")
     assert b"Send follow-up email" in response.content
     assert b"calendar-overdue" in response.content
+
+
+def test_calendar_excludes_archived_tasks(client, db_session):
+    from app.models import Task
+
+    due = datetime(2026, 9, 22, 10, 0, tzinfo=UTC)
+    client.post("/tasks", data={"title": "Old task", "due_date": due.strftime("%Y-%m-%dT%H:%M")})
+    task = db_session.query(Task).filter_by(title="Old task").one()
+    client.post(f"/tasks/{task.id}/complete")
+    client.post(f"/tasks/{task.id}/archive")
+
+    response = client.get("/calendar?start=2026-09-21")
+    assert b"Old task" not in response.content

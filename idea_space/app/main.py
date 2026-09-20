@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 
 from app.db import Base, SessionLocal, engine
 from app.routers import calendar, labels, reminders, tasks
@@ -13,9 +14,25 @@ app.include_router(calendar.router)
 app.include_router(reminders.router)
 
 
+def ensure_completion_note_column(target_engine) -> None:
+    """Idempotently add tasks.completion_note to a pre-existing (Slice 1) database.
+
+    `Base.metadata.create_all` only creates missing tables; it never adds
+    columns to a table that already exists. Any database created before this
+    slice already has a `tasks` table without `completion_note`, so we patch
+    it in directly.
+    """
+    with target_engine.connect() as conn:
+        columns = {row[1] for row in conn.execute(text("PRAGMA table_info(tasks)"))}
+        if "completion_note" not in columns:
+            conn.execute(text("ALTER TABLE tasks ADD COLUMN completion_note TEXT"))
+            conn.commit()
+
+
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
+    ensure_completion_note_column(engine)
     db = SessionLocal()
     try:
         seed_default_workspace(db)

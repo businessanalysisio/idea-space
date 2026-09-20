@@ -401,6 +401,51 @@ def test_history_unknown_task_returns_404(client):
     assert response.status_code == 404
 
 
+def test_complete_task_requires_open_status(client, db_session):
+    from app.models import Task
+
+    due = (datetime.now(UTC) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+    client.post("/tasks", data={"title": "Draft outline", "due_date": due})
+    task = db_session.query(Task).filter_by(title="Draft outline").one()
+    client.post(f"/tasks/{task.id}/complete")  # now done
+
+    response = client.post(f"/tasks/{task.id}/complete")
+    assert response.status_code == 404
+
+
+def test_tasks_page_shows_completion_note_input_only_on_open_tasks(client):
+    due = (datetime.now(UTC) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+    client.post("/tasks", data={"title": "Draft outline", "due_date": due})
+
+    response = client.get("/tasks")
+    assert b'name="completion_note"' in response.content
+
+
+def test_recurring_successor_does_not_inherit_completion_note(client, db_session):
+    from app.models import Task
+
+    due = datetime(2026, 9, 20, 9, 0, tzinfo=UTC)
+    client.post(
+        "/tasks",
+        data={
+            "title": "Weekly review",
+            "due_date": due.strftime("%Y-%m-%dT%H:%M"),
+            "recurrence_pattern": "weekly",
+            "recurrence_interval": "1",
+        },
+    )
+    original = db_session.query(Task).filter_by(title="Weekly review").one()
+
+    client.post(f"/tasks/{original.id}/complete", data={"completion_note": "Sent to stakeholders"})
+
+    successor = (
+        db_session.query(Task)
+        .filter(Task.recurrence_series_id == original.recurrence_series_id, Task.id != original.id)
+        .one()
+    )
+    assert successor.completion_note is None
+
+
 def test_history_empty_for_task_with_no_changes(client, db_session):
     from app.models import Task
 

@@ -237,6 +237,10 @@ form {
   padding: var(--space-sm) var(--space-md);
 }
 
+#reminder-banner:empty {
+  display: none;
+}
+
 .reminder {
   display: flex;
   gap: var(--space-sm);
@@ -273,6 +277,10 @@ form {
   border-top: 1px solid var(--color-line);
   margin-top: var(--space-xs);
   padding-top: var(--space-xs);
+}
+
+.task-history:empty {
+  display: none;
 }
 
 .history-note {
