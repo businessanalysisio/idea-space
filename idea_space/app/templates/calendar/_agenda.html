@@ -1,0 +1,17 @@
+<div id="calendar-content" data-view="agenda">
+  {% if not items %}
+  <p class="agenda-empty">Nothing scheduled in the next 14 days.</p>
+  {% else %}
+  <ul class="calendar-agenda-list">
+    {% for item in items %}
+    <li class="calendar-agenda-item">
+      <span class="calendar-event-marker" style="background: var(--accent);"></span>
+      <div>
+        <div style="font-size:9px; font-weight:700; color: var(--text-muted);">{{ item.due_date.strftime('%a %b %d, %H:%M') }}</div>
+        <div style="font-size:12px; font-weight:600;">{{ item.title }}</div>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div>

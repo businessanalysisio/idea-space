@@ -1,0 +1,32 @@
+<div id="calendar-content" data-view="month" data-month="{{ month_str }}">
+  <div class="calendar-toolbar">
+    <span style="font-size:11px; font-weight:700;">{{ month_label }}</span>
+    <a class="btn btn-outline" href="/calendar?view=month">TODAY</a>
+  </div>
+  <div class="calendar-weekday-row">
+    <div class="calendar-weekday">MON</div>
+    <div class="calendar-weekday">TUE</div>
+    <div class="calendar-weekday">WED</div>
+    <div class="calendar-weekday">THU</div>
+    <div class="calendar-weekday">FRI</div>
+    <div class="calendar-weekday">SAT</div>
+    <div class="calendar-weekday">SUN</div>
+  </div>
+  <div class="calendar-month-grid">
+    {% for week in weeks %}
+      {% for day in week %}
+      <div class="calendar-day{% if day.is_today %} calendar-day--today{% endif %}{% if not day.is_current_month %} calendar-day--other-month{% endif %}" data-date="{{ day.date.strftime('%Y-%m-%d') }}">
+        <div class="day-number">{{ day.date.day }}</div>
+        <ul>
+          {% for item in day['items'] %}
+          <li class="calendar-event{% if item.virtual %} task--virtual{% endif %}" {% if not item.virtual %}data-task-id="{{ item.id }}" draggable="true"{% endif %}>
+            <span class="calendar-event-marker" style="background: var(--accent);"></span>
+            <span class="calendar-event-name">{{ item.title }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endfor %}
+    {% endfor %}
+  </div>
+</div>

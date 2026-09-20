@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="page-eyebrow">PLANNING HORIZON</div>
+    <div class="page-title">
+      {% if view == "month" %}{{ month_label }}{% elif view == "week" %}Week of {{ week_start.strftime('%b %d, %Y') }}{% else %}Upcoming agenda{% endif %}
+    </div>
+    <div class="page-subtitle">A calm view of commitments, milestones, and momentum.</div>
+  </div>
+  <div class="calendar-view-toggle">
+    <a class="calendar-view-btn{% if view == 'month' %} calendar-view-btn--active{% endif %}" href="/calendar?view=month">MONTH</a>
+    <a class="calendar-view-btn{% if view == 'week' %} calendar-view-btn--active{% endif %}" href="/calendar?view=week">WEEK</a>
+    <a class="calendar-view-btn{% if view == 'agenda' %} calendar-view-btn--active{% endif %}" href="/calendar?view=agenda">AGENDA</a>
+  </div>
+</div>
+<div class="calendar-layout">
+  <div class="calendar-main">
+    {% include content_template %}
+  </div>
+  <div class="upcoming-agenda">
+    <div class="page-eyebrow">UP NEXT</div>
+    {% if upcoming %}
+    <div style="font-size:19px; font-weight:600;">{{ upcoming.date.strftime('%A, %b %d') }}</div>
+    {% for item in upcoming['items'] %}
+    <div class="calendar-agenda-item" style="border:none; padding:0;">
+      <div class="calendar-event-marker" style="background: {{ ['#33D69F', '#A855F7', '#F5B942', '#9A9AA3'][loop.index0 % 4] }};"></div>
+      <div>
+        <div style="font-size:9px; font-weight:700;">{{ item.due_date.strftime('%H:%M') }}</div>
+        <div style="font-size:12px; font-weight:600;">{{ item.title }}</div>
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <p class="agenda-empty">Nothing scheduled.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

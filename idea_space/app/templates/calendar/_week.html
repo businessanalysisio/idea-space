@@ -1,0 +1,34 @@
+<div id="calendar-content" data-view="week" data-week-start="{{ week_start_str }}">
+  {% if overdue %}
+  <div class="calendar-overdue">
+    <h3>Overdue</h3>
+    <ul style="list-style:none; padding:0; margin:0;">
+      {% for task in overdue %}
+      <li class="calendar-event" data-task-id="{{ task.id }}" draggable="true">
+        <span class="calendar-event-marker" style="background: var(--danger);"></span>
+        <span class="calendar-event-name">{{ task.title }} &mdash; {{ task.due_date.strftime('%Y-%m-%d') }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+  <div class="calendar-weekday-row">
+    {% for day in days %}
+    <div class="calendar-weekday">{{ day.date.strftime('%a %b %d') }}</div>
+    {% endfor %}
+  </div>
+  <div class="calendar-week">
+    {% for day in days %}
+    <div class="calendar-day" data-date="{{ day.date.strftime('%Y-%m-%d') }}">
+      <ul>
+        {% for item in day['items'] %}
+        <li class="calendar-event{% if item.virtual %} task--virtual{% endif %}" {% if not item.virtual %}data-task-id="{{ item.id }}" draggable="true"{% endif %}>
+          <span class="calendar-event-marker" style="background: var(--accent);"></span>
+          <span class="calendar-event-name">{{ item.title }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endfor %}
+  </div>
+</div>

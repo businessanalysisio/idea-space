@@ -327,4 +327,4 @@ def reschedule_task(
     record_change(db, task, "due_date", old_date_str, due_date)
     db.commit()
 
-    return calendar_router.render_calendar(request, db, view=view, month=month, start=start)
+    return calendar_router._render_calendar_fragment(request, db, view=view, month=month, start=start)

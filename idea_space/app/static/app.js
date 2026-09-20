@@ -1,5 +1,5 @@
 document.body.addEventListener("dragstart", (event) => {
-  const taskEl = event.target.closest("li[data-task-id]");
+  const taskEl = event.target.closest("[data-task-id]");
   if (!taskEl) return;
   event.dataTransfer.setData("text/task-id", taskEl.dataset.taskId);
 });
@@ -18,15 +18,24 @@ document.body.addEventListener("drop", async (event) => {
   const taskId = event.dataTransfer.getData("text/task-id");
   if (!taskId) return;
 
+  const contentEl = document.getElementById("calendar-content");
+  if (!contentEl) return;
+
   const newDate = dayEl.dataset.date;
+  const params = new URLSearchParams();
+  params.set("due_date", newDate);
+  params.set("view", contentEl.dataset.view || "month");
+  if (contentEl.dataset.month) params.set("month", contentEl.dataset.month);
+  if (contentEl.dataset.weekStart) params.set("start", contentEl.dataset.weekStart);
+
   const response = await fetch(`/tasks/${taskId}/reschedule`, {
     method: "PATCH",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: `due_date=${encodeURIComponent(newDate)}`,
+    body: params.toString(),
   });
 
   if (response.ok) {
     const html = await response.text();
-    document.querySelector("main").innerHTML = html;
+    contentEl.outerHTML = html;
   }
 });
