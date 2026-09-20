@@ -3,3 +3,6 @@
 __pycache__/
 *.pyc
 idea_space.db
+.env
+.env.local
+.vercel
