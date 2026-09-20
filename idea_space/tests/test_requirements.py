@@ -347,3 +347,63 @@ def test_unlink_stakeholder_is_safe_when_not_linked(client, db_session):
 
     response = client.delete(f"/requirements/{requirement.id}/stakeholders/{stakeholder.id}")
     assert response.status_code == 200
+
+
+def test_requirements_page_shows_metrics_row(client):
+    response = client.get("/requirements")
+    assert response.status_code == 200
+    body = response.text
+    assert 'class="metrics-row"' in body
+    assert "TOTAL" in body
+    assert "VALIDATED" in body
+    assert "IN REVIEW" in body
+    assert "AT RISK" in body
+
+
+def test_requirements_filter_invalid_value_returns_400(client):
+    response = client.get("/requirements?filter=bogus")
+    assert response.status_code == 400
+
+
+def test_requirements_filter_archived_shows_only_delivered(client):
+    client.post("/requirements", data={"title": "Draft one", "status": "draft"})
+    client.post("/requirements", data={"title": "Shipped one", "status": "delivered"})
+
+    response = client.get("/requirements?filter=archived")
+    assert response.status_code == 200
+    assert "Shipped one" in response.text
+    assert "Draft one" not in response.text
+
+
+def test_edit_requirement_updates_updated_at(client, db_session):
+    from datetime import timezone
+
+    from app.models import Requirement
+
+    client.post("/requirements", data={"title": "Editable"})
+    requirement = db_session.query(Requirement).filter_by(title="Editable").one()
+    before = requirement.updated_at
+    if before.tzinfo is None:
+        before = before.replace(tzinfo=timezone.utc)
+
+    client.patch(
+        f"/requirements/{requirement.id}",
+        data={"title": "Editable v2", "status": "draft"},
+    )
+
+    db_session.refresh(requirement)
+    after = requirement.updated_at
+    if after.tzinfo is None:
+        after = after.replace(tzinfo=timezone.utc)
+    assert after >= before
+
+
+def test_requirements_export_csv_returns_one_row_per_requirement(client):
+    client.post("/requirements", data={"title": "CSV req"})
+
+    response = client.get("/requirements/export.csv")
+    assert response.status_code == 200
+    assert "text/csv" in response.headers["content-type"]
+    lines = response.text.strip().splitlines()
+    assert lines[0] == "id,title,status,owner,updated_at,links_count"
+    assert any("CSV req" in line for line in lines[1:])

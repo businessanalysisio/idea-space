@@ -1,4 +1,21 @@
 <li class="requirement" data-requirement-id="{{ requirement.id }}">
-  <a href="/requirements/{{ requirement.id }}" class="requirement-title">{{ requirement.title }}</a>
-  <span class="requirement-status">{{ requirement.status }}</span>
+  <span class="requirement-id">REQ-{{ "%03d"|format(requirement.id) }}</span>
+  <div class="requirement-main">
+    <a href="/requirements/{{ requirement.id }}" class="requirement-title">{{ requirement.title }}</a>
+    <span class="requirement-meta">Updated {{ requirement.updated_at.strftime('%Y-%m-%d') }}</span>
+  </div>
+  <span class="requirement-owner">Owner</span>
+  <span class="requirement-status">
+    {% set trace_status = traceability_status(requirement) %}
+    {% if trace_status == "at_risk" %}
+    <span class="status-badge status-badge--danger">AT RISK</span>
+    {% elif trace_status == "verified" %}
+    <span class="status-badge status-badge--success">VALIDATED</span>
+    {% elif trace_status == "partial" %}
+    <span class="status-badge status-badge--warning">PARTIAL</span>
+    {% else %}
+    <span class="status-badge status-badge--neutral">DRAFT</span>
+    {% endif %}
+  </span>
+  <span class="requirement-links">{{ "%02d"|format(requirement.stakeholders|length + requirement.decisions|length + requirement.risks|length + requirement.tasks|length) }}</span>
 </li>

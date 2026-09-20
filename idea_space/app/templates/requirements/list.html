@@ -1,21 +1,76 @@
 {% extends "base.html" %}
 {% block content %}
-<h2>Requirements</h2>
-<form hx-post="/requirements" hx-target="#requirement-list" hx-swap="outerHTML">
-  <input type="text" name="title" placeholder="Requirement title" required>
-  <textarea name="description" placeholder="Description"></textarea>
-  <textarea name="business_need" placeholder="Business need"></textarea>
-  <textarea name="acceptance_criteria" placeholder="Acceptance criteria"></textarea>
-  <select name="status">
-    <option value="draft">Draft</option>
-    <option value="approved">Approved</option>
-    <option value="in_progress">In Progress</option>
-    <option value="delivered">Delivered</option>
-  </select>
-  <button type="submit">Add requirement</button>
-</form>
-{% include "stakeholders/_manager.html" %}
-{% include "decisions/_manager.html" %}
-{% include "risks/_manager.html" %}
-{% include "requirements/_list_only.html" %}
+<div class="page-header">
+  <div>
+    <div class="page-eyebrow">PRODUCT DEFINITION</div>
+    <div class="page-title">Requirements registry</div>
+    <div class="page-subtitle">One source of truth from intent to acceptance.</div>
+  </div>
+  <a class="btn btn-outline" href="/requirements/export.csv">EXPORT CSV</a>
+</div>
+
+<div class="metrics-row">
+  <div class="metric-card">
+    <span class="metric-label">TOTAL</span>
+    <span class="metric-value">{{ total_count }}</span>
+  </div>
+  <div class="metric-card">
+    <span class="metric-label">VALIDATED</span>
+    <span class="metric-value" style="color: var(--success);">{{ "%02d"|format(validated_count) }}</span>
+  </div>
+  <div class="metric-card">
+    <span class="metric-label">IN REVIEW</span>
+    <span class="metric-value" style="color: var(--warning);">{{ "%02d"|format(in_review_count) }}</span>
+  </div>
+  <div class="metric-card">
+    <span class="metric-label">AT RISK</span>
+    <span class="metric-value" style="color: var(--danger);">{{ "%02d"|format(at_risk_count) }}</span>
+  </div>
+</div>
+
+<div class="requirements-layout">
+  <div class="requirements-table">
+    <div class="panel-toolbar">
+      <div class="filter-tabs">
+        <a class="filter-tab{% if current_filter == 'all' %} filter-tab--active{% endif %}" href="/requirements?filter=all">ALL {{ total_count }}</a>
+        <a class="filter-tab{% if current_filter == 'active' %} filter-tab--active{% endif %}" href="/requirements?filter=active">ACTIVE {{ active_count }}</a>
+        <a class="filter-tab{% if current_filter == 'archived' %} filter-tab--active{% endif %}" href="/requirements?filter=archived">ARCHIVED {{ archived_count }}</a>
+      </div>
+      <span style="font-size:9px; font-weight:700; color: var(--text-muted);">LAST UPDATED</span>
+    </div>
+    {% include "requirements/_list_only.html" %}
+  </div>
+  <div class="create-panel">
+    <div class="page-eyebrow">NEW REQUIREMENT</div>
+    <div style="font-size:20px; font-weight:600;">Define the intent</div>
+    <form hx-post="/requirements" hx-target="#requirement-list" hx-swap="outerHTML" style="display:flex; flex-direction:column; gap:16px; margin:0;">
+      <div class="field-group">
+        <span class="field-label">TITLE</span>
+        <input type="text" name="title" class="field-input" placeholder="Describe the user outcome" required>
+      </div>
+      <div class="field-group">
+        <span class="field-label">BUSINESS NEED</span>
+        <textarea name="business_need" class="field-input" placeholder="Why this matters now"></textarea>
+      </div>
+      <div class="field-group">
+        <span class="field-label">ACCEPTANCE CRITERIA</span>
+        <textarea name="acceptance_criteria" class="field-input" placeholder="What must be true"></textarea>
+      </div>
+      <select name="status" class="field-input" disabled>
+        <option value="draft" selected>Assigned owner: current user</option>
+      </select>
+      <input type="hidden" name="status" value="draft">
+      <button type="submit" class="btn-primary" style="justify-content:center;">CREATE REQUIREMENT</button>
+    </form>
+  </div>
+</div>
+
+<details style="margin-top:26px;">
+  <summary style="cursor:pointer; color: var(--text-muted); font-size:11px; font-weight:700;">Manage stakeholders, decisions &amp; risks</summary>
+  <div style="margin-top:12px;">
+    {% include "stakeholders/_manager.html" %}
+    {% include "decisions/_manager.html" %}
+    {% include "risks/_manager.html" %}
+  </div>
+</details>
 {% endblock %}

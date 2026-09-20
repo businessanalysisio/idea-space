@@ -1,4 +1,9 @@
+import csv
+import io
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
+from fastapi.responses import StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -15,15 +20,17 @@ from app.models import (
     Task,
 )
 from app.seed import seed_default_workspace
+from app.services.traceability import traceability_status
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
 VALID_REQUIREMENT_STATUSES = {"draft", "approved", "in_progress", "delivered"}
+VALID_FILTERS = {"all", "active", "archived"}
 
 
 def _all_requirements(db: Session) -> list[Requirement]:
-    return db.query(Requirement).order_by(Requirement.created_at.desc()).all()
+    return db.query(Requirement).order_by(Requirement.updated_at.desc()).all()
 
 
 def _requirement_page_context(db: Session, requirement: Requirement) -> dict:
@@ -36,18 +43,81 @@ def _requirement_page_context(db: Session, requirement: Requirement) -> dict:
     }
 
 
+def _links_count(requirement: Requirement) -> int:
+    return (
+        len(requirement.stakeholders)
+        + len(requirement.decisions)
+        + len(requirement.risks)
+        + len(requirement.tasks)
+    )
+
+
 @router.get("/requirements")
-def list_requirements(request: Request, db: Session = Depends(get_db)):
+def list_requirements(
+    request: Request, filter: str = "all", db: Session = Depends(get_db)
+):
+    if filter not in VALID_FILTERS:
+        raise HTTPException(status_code=400, detail=f"Invalid filter: {filter}")
+
+    all_requirements = _all_requirements(db)
+
+    total_count = len(all_requirements)
+    validated_count = sum(1 for r in all_requirements if traceability_status(r) == "verified")
+    in_review_count = sum(1 for r in all_requirements if r.status == "in_progress")
+    at_risk_count = sum(1 for r in all_requirements if traceability_status(r) == "at_risk")
+    active_count = sum(1 for r in all_requirements if r.status != "delivered")
+    archived_count = total_count - active_count
+
+    if filter == "active":
+        visible = [r for r in all_requirements if r.status != "delivered"]
+    elif filter == "archived":
+        visible = [r for r in all_requirements if r.status == "delivered"]
+    else:
+        visible = all_requirements
+
     return templates.TemplateResponse(
         request,
         "requirements/list.html",
         {
-            "requirements": _all_requirements(db),
+            "requirements": visible,
             "all_stakeholders": db.query(Stakeholder).order_by(Stakeholder.name.asc()).all(),
             "all_decisions": db.query(Decision).order_by(Decision.title.asc()).all(),
             "all_risks": db.query(Risk).order_by(Risk.title.asc()).all(),
+            "total_count": total_count,
+            "validated_count": validated_count,
+            "in_review_count": in_review_count,
+            "at_risk_count": at_risk_count,
+            "active_count": active_count,
+            "archived_count": archived_count,
+            "current_filter": filter,
+            "traceability_status": traceability_status,
             "active_nav": "requirements",
         },
+    )
+
+
+@router.get("/requirements/export.csv")
+def export_requirements_csv(db: Session = Depends(get_db)):
+    requirements = _all_requirements(db)
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(["id", "title", "status", "owner", "updated_at", "links_count"])
+    for requirement in requirements:
+        writer.writerow(
+            [
+                requirement.id,
+                requirement.title,
+                requirement.status,
+                requirement.owner_id,
+                requirement.updated_at.isoformat(),
+                _links_count(requirement),
+            ]
+        )
+    buffer.seek(0)
+    return StreamingResponse(
+        buffer,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=requirements.csv"},
     )
 
 
@@ -78,7 +148,9 @@ def create_requirement(
     db.commit()
 
     return templates.TemplateResponse(
-        request, "requirements/_list_only.html", {"requirements": _all_requirements(db)}
+        request,
+        "requirements/_list_only.html",
+        {"requirements": _all_requirements(db), "traceability_status": traceability_status},
     )
 
 
@@ -118,6 +190,7 @@ def edit_requirement(
     requirement.business_need = business_need
     requirement.acceptance_criteria = acceptance_criteria
     requirement.status = status
+    requirement.updated_at = datetime.now(timezone.utc)
     db.commit()
 
     return templates.TemplateResponse(
