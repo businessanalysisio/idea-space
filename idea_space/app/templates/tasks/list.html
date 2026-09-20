@@ -1,4 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
-{% include "tasks/_list_fragment.html" %}
+<div class="page-header">
+  <div>
+    <div class="page-eyebrow">COMMAND CENTER</div>
+    <div class="page-title">{% if show_archived %}Archived tasks{% else %}Today's priorities{% endif %}</div>
+    <div class="page-subtitle">Turn loose ideas into visible progress.</div>
+  </div>
+</div>
+
+{% if show_archived %}
+  {% include "labels/_filter_bar.html" %}
+  {% include "tasks/_task_list_only.html" %}
+  <p><a class="archived-link" href="/tasks">&larr; Back to board</a></p>
+{% else %}
+  {% include "tasks/_board.html" %}
+{% endif %}
 {% endblock %}

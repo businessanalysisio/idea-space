@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.templating import Jinja2Templates
@@ -17,12 +17,16 @@ templates = Jinja2Templates(directory="app/templates")
 VALID_STATUSES = {"open", "done", "archived"}
 
 
+def _normalize_due_date(task: Task) -> None:
+    # SQLite strips tzinfo on read-back; normalize before comparing.
+    if task.due_date.tzinfo is None:
+        task.due_date = task.due_date.replace(tzinfo=timezone.utc)
+
+
 def _attach_overdue_flag(tasks: list[Task]) -> list[Task]:
     now = datetime.now(timezone.utc)
     for task in tasks:
-        # SQLite strips tzinfo on read-back; normalize before comparing.
-        if task.due_date.tzinfo is None:
-            task.due_date = task.due_date.replace(tzinfo=timezone.utc)
+        _normalize_due_date(task)
         task.is_overdue = task.status == "open" and task.due_date < now
     return tasks
 
@@ -39,6 +43,73 @@ def _open_tasks(db: Session) -> list[Task]:
     return _filtered_tasks(db, None, "open")
 
 
+def _board_columns(open_tasks: list[Task], done_tasks: list[Task]) -> dict:
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = today_start + timedelta(days=1)
+
+    now_column = [t for t in open_tasks if t.due_date < today_end]
+    next_column = [t for t in open_tasks if t.due_date >= today_end]
+    done_column = sorted(
+        done_tasks, key=lambda t: t.completed_at or t.created_at, reverse=True
+    )[:10]
+
+    return {"now": now_column, "next": next_column, "done": done_column, "today_start": today_start, "today_end": today_end}
+
+
+def _task_metrics(db: Session, label_ids: list[int] | None = None) -> dict:
+    open_query = db.query(Task).filter(Task.status == "open")
+    done_query = db.query(Task).filter(Task.status == "done")
+    if label_ids:
+        open_query = open_query.join(Task.labels).filter(Label.id.in_(label_ids)).distinct()
+        done_query = done_query.join(Task.labels).filter(Label.id.in_(label_ids)).distinct()
+
+    open_tasks = _attach_overdue_flag(open_query.all())
+    done_tasks = done_query.all()
+
+    columns = _board_columns(open_tasks, done_tasks)
+
+    open_count = len(open_tasks)
+    in_focus_count = len(
+        [t for t in open_tasks if columns["today_start"] <= t.due_date < columns["today_end"]]
+    )
+    completed_count = len(done_tasks)
+    velocity = (
+        round(completed_count / (completed_count + open_count) * 100)
+        if (completed_count + open_count) > 0
+        else 0
+    )
+    blocked_count = db.query(Task).filter(Task.blocked.is_(True)).count()
+
+    return {
+        "open_count": open_count,
+        "in_focus_count": in_focus_count,
+        "completed_count": completed_count,
+        "velocity": velocity,
+        "blocked_count": blocked_count,
+        "columns": columns,
+    }
+
+
+def _render_task_board(request: Request, db: Session, label_ids: list[int] | None = None):
+    metrics = _task_metrics(db, label_ids)
+    all_labels = db.query(Label).order_by(Label.name.asc()).all()
+    return templates.TemplateResponse(
+        request,
+        "tasks/_board.html",
+        {
+            "columns": metrics["columns"],
+            "open_count": metrics["open_count"],
+            "in_focus_count": metrics["in_focus_count"],
+            "completed_count": metrics["completed_count"],
+            "velocity": metrics["velocity"],
+            "blocked_count": metrics["blocked_count"],
+            "all_labels": all_labels,
+            "selected_label_ids": label_ids or [],
+        },
+    )
+
+
 @router.get("/tasks")
 def list_tasks(
     request: Request,
@@ -49,17 +120,37 @@ def list_tasks(
     if status not in VALID_STATUSES:
         raise HTTPException(status_code=400, detail=f"Invalid status: {status}")
 
-    label_ids = [int(x) for x in labels.split(",")] if labels else None
-    tasks = _filtered_tasks(db, label_ids, status)
     all_labels = db.query(Label).order_by(Label.name.asc()).all()
+    label_ids = [int(x) for x in labels.split(",")] if labels else None
+
+    if status == "archived":
+        tasks = _filtered_tasks(db, label_ids, "archived")
+        return templates.TemplateResponse(
+            request,
+            "tasks/list.html",
+            {
+                "show_archived": True,
+                "tasks": tasks,
+                "all_labels": all_labels,
+                "selected_label_ids": label_ids or [],
+                "active_nav": "tasks",
+            },
+        )
+
+    metrics = _task_metrics(db, label_ids)
     return templates.TemplateResponse(
         request,
         "tasks/list.html",
         {
-            "tasks": tasks,
+            "show_archived": False,
+            "columns": metrics["columns"],
+            "open_count": metrics["open_count"],
+            "in_focus_count": metrics["in_focus_count"],
+            "completed_count": metrics["completed_count"],
+            "velocity": metrics["velocity"],
+            "blocked_count": metrics["blocked_count"],
             "all_labels": all_labels,
             "selected_label_ids": label_ids or [],
-            "status": status,
             "active_nav": "tasks",
         },
     )
@@ -104,13 +195,7 @@ def create_task(
         task.recurrence_series_id = task.id
         db.commit()
 
-    tasks = _open_tasks(db)
-    all_labels = db.query(Label).order_by(Label.name.asc()).all()
-    return templates.TemplateResponse(
-        request,
-        "tasks/_task_list_only.html",
-        {"tasks": tasks, "all_labels": all_labels},
-    )
+    return _render_task_board(request, db)
 
 
 @router.post("/tasks/{task_id}/complete")
@@ -131,9 +216,7 @@ def complete_task(
     db.commit()
 
     if task.recurrence_active:
-        # SQLite strips tzinfo on read-back; normalize before using in compute_next_due_date
-        if task.due_date.tzinfo is None:
-            task.due_date = task.due_date.replace(tzinfo=timezone.utc)
+        _normalize_due_date(task)
 
         next_due = compute_next_due_date(
             task.recurrence_pattern,
@@ -158,13 +241,7 @@ def complete_task(
             db.add(successor)
             db.commit()
 
-    tasks = _open_tasks(db)
-    all_labels = db.query(Label).order_by(Label.name.asc()).all()
-    return templates.TemplateResponse(
-        request,
-        "tasks/_task_list_only.html",
-        {"tasks": tasks, "all_labels": all_labels},
-    )
+    return _render_task_board(request, db)
 
 
 @router.post("/tasks/{task_id}/archive")
@@ -177,13 +254,7 @@ def archive_task(request: Request, task_id: int, db: Session = Depends(get_db)):
     task.status = "archived"
     db.commit()
 
-    tasks = _filtered_tasks(db, None, "done")
-    all_labels = db.query(Label).order_by(Label.name.asc()).all()
-    return templates.TemplateResponse(
-        request,
-        "tasks/_task_list_only.html",
-        {"tasks": tasks, "all_labels": all_labels},
-    )
+    return _render_task_board(request, db)
 
 
 @router.get("/tasks/{task_id}/history")
@@ -219,13 +290,19 @@ def set_recurrence_active(
     task.recurrence_active = active.lower() == "true"
     db.commit()
 
-    tasks = _open_tasks(db)
-    all_labels = db.query(Label).order_by(Label.name.asc()).all()
-    return templates.TemplateResponse(
-        request,
-        "tasks/_task_list_only.html",
-        {"tasks": tasks, "all_labels": all_labels},
-    )
+    return _render_task_board(request, db)
+
+
+@router.patch("/tasks/{task_id}/block")
+def toggle_blocked(request: Request, task_id: int, db: Session = Depends(get_db)):
+    task = db.get(Task, task_id)
+    if task is None or task.status == "archived":
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    task.blocked = not task.blocked
+    db.commit()
+
+    return _render_task_board(request, db)
 
 
 @router.patch("/tasks/{task_id}/reschedule")
@@ -233,6 +310,9 @@ def reschedule_task(
     request: Request,
     task_id: int,
     due_date: str = Form(...),
+    view: str = Form("month"),
+    month: str | None = Form(None),
+    start: str | None = Form(None),
     db: Session = Depends(get_db),
 ):
     task = db.get(Task, task_id)
@@ -247,4 +327,4 @@ def reschedule_task(
     record_change(db, task, "due_date", old_date_str, due_date)
     db.commit()
 
-    return calendar_router.calendar_week(request, start=None, db=db)
+    return calendar_router.render_calendar(request, db, view=view, month=month, start=start)

@@ -6,7 +6,8 @@ UTC = timezone.utc
 def test_get_tasks_returns_empty_list_page(client):
     response = client.get("/tasks")
     assert response.status_code == 200
-    assert b"No tasks yet" in response.content
+    assert 'class="metrics-row"' in response.text
+    assert 'data-board-column="now"' in response.text
 
 
 def test_create_task_returns_it_in_list(client):
@@ -42,15 +43,25 @@ def test_create_recurring_task_stores_recurrence_fields(client, db_session):
     assert task.recurrence_series_id == task.id
 
 
-def test_overdue_task_is_flagged(client):
+def test_overdue_task_lands_in_now_column(client):
+    # Redesign note: the board no longer marks overdue tasks with a
+    # dedicated CSS class (`.task--overdue` only survives in the archived
+    # list's `_row.html`); instead overdue tasks simply surface in the NOW
+    # column since their due_date is in the past (before today's end).
     overdue_due = (datetime.now(UTC) - timedelta(days=2)).strftime("%Y-%m-%dT%H:%M")
     client.post("/tasks", data={"title": "Send follow-up email", "due_date": overdue_due})
 
     response = client.get("/tasks")
-    assert b"task--overdue" in response.content
+    body = response.text
+    now_idx = body.index('data-board-column="now"')
+    next_idx = body.index('data-board-column="next"')
+    assert "Send follow-up email" in body[now_idx:next_idx]
 
 
-def test_complete_non_recurring_task_removes_it_from_open_list(client, db_session):
+def test_complete_non_recurring_task_moves_it_from_open_columns_to_done(client, db_session):
+    # Redesign note: the returned fragment is now the whole board (#task-board),
+    # which includes a DONE column showing recently completed tasks — so the
+    # completed task is expected to appear there, just no longer in NOW/NEXT.
     from app.models import Task
 
     due = (datetime.now(UTC) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
@@ -59,7 +70,13 @@ def test_complete_non_recurring_task_removes_it_from_open_list(client, db_sessio
 
     response = client.post(f"/tasks/{task.id}/complete")
     assert response.status_code == 200
-    assert b"One-off review" not in response.content
+    body = response.text
+    now_idx = body.index('data-board-column="now"')
+    next_idx = body.index('data-board-column="next"')
+    done_idx = body.index('data-board-column="done"')
+    assert "One-off review" not in body[now_idx:next_idx]
+    assert "One-off review" not in body[next_idx:done_idx]
+    assert "One-off review" in body[done_idx:]
 
     db_session.refresh(task)
     assert task.status == "done"
@@ -413,12 +430,25 @@ def test_complete_task_requires_open_status(client, db_session):
     assert response.status_code == 404
 
 
-def test_tasks_page_shows_completion_note_input_only_on_open_tasks(client):
+def test_tasks_page_shows_enabled_checkbox_only_on_open_tasks(client, db_session):
+    # Redesign note: the board card no longer has an inline completion-note
+    # text input (completion_note is still accepted by the API — see
+    # test_complete_task_with_note_stores_it — just not surfaced in this
+    # quick-capture-first UI). The open/done distinction now shows up as an
+    # enabled vs. checked-and-disabled checkbox instead.
+    from app.models import Task
+
     due = (datetime.now(UTC) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
     client.post("/tasks", data={"title": "Draft outline", "due_date": due})
+    task = db_session.query(Task).filter_by(title="Draft outline").one()
 
     response = client.get("/tasks")
-    assert b'name="completion_note"' in response.content
+    assert 'class="task-card-checkbox" onclick=' in response.text
+
+    client.post(f"/tasks/{task.id}/complete")
+
+    response = client.get("/tasks")
+    assert 'class="task-card-checkbox" checked disabled' in response.text
 
 
 def test_recurring_successor_does_not_inherit_completion_note(client, db_session):
@@ -456,3 +486,107 @@ def test_history_empty_for_task_with_no_changes(client, db_session):
     response = client.get(f"/tasks/{task.id}/history")
     assert response.status_code == 200
     assert b"No changes recorded yet" in response.content
+
+
+def test_tasks_page_shows_metrics_row(client):
+    due_today = datetime.now(UTC).strftime("%Y-%m-%dT12:00")
+    client.post("/tasks", data={"title": "Today task", "due_date": due_today})
+
+    response = client.get("/tasks")
+    assert response.status_code == 200
+    body = response.text
+    assert 'class="metrics-row"' in body
+    assert "OPEN" in body
+    assert "IN FOCUS" in body
+    assert "COMPLETED" in body
+    assert "BLOCKED" in body
+
+
+def test_task_due_today_lands_in_now_column_and_future_task_in_next(client):
+    due_today = datetime.now(UTC).strftime("%Y-%m-%dT12:00")
+    due_future = (datetime.now(UTC) + timedelta(days=5)).strftime("%Y-%m-%dT12:00")
+    client.post("/tasks", data={"title": "Now task", "due_date": due_today})
+    client.post("/tasks", data={"title": "Next task", "due_date": due_future})
+
+    response = client.get("/tasks")
+    body = response.text
+    now_idx = body.index('data-board-column="now"')
+    next_idx = body.index('data-board-column="next"')
+    now_section = body[now_idx:next_idx]
+    next_section = body[next_idx:]
+
+    assert "Now task" in now_section
+    assert "Next task" not in now_section
+    assert "Next task" in next_section
+
+
+def test_completed_task_lands_in_done_column(client, db_session):
+    from app.models import Task
+
+    due_today = datetime.now(UTC).strftime("%Y-%m-%dT12:00")
+    client.post("/tasks", data={"title": "Finish me", "due_date": due_today})
+    task = db_session.query(Task).filter_by(title="Finish me").one()
+    client.post(f"/tasks/{task.id}/complete")
+
+    response = client.get("/tasks")
+    body = response.text
+    done_idx = body.index('data-board-column="done"')
+    assert "Finish me" in body[done_idx:]
+
+
+def test_block_toggle_flips_and_is_reversible(client, db_session):
+    from app.models import Task
+
+    due_today = datetime.now(UTC).strftime("%Y-%m-%dT12:00")
+    client.post("/tasks", data={"title": "Blockable", "due_date": due_today})
+    task = db_session.query(Task).filter_by(title="Blockable").one()
+
+    first = client.patch(f"/tasks/{task.id}/block")
+    assert first.status_code == 200
+    assert "task-card-blocked-badge" in first.text
+    db_session.refresh(task)
+    assert task.blocked is True
+
+    second = client.patch(f"/tasks/{task.id}/block")
+    assert second.status_code == 200
+    db_session.refresh(task)
+    assert task.blocked is False
+
+
+def test_block_nonexistent_task_returns_404(client):
+    response = client.patch("/tasks/999999/block")
+    assert response.status_code == 404
+
+
+def test_block_archived_task_returns_404(client, db_session):
+    from app.models import Task
+
+    due_today = datetime.now(UTC).strftime("%Y-%m-%dT12:00")
+    client.post("/tasks", data={"title": "To archive", "due_date": due_today})
+    task = db_session.query(Task).filter_by(title="To archive").one()
+    client.post(f"/tasks/{task.id}/complete")
+    client.post(f"/tasks/{task.id}/archive")
+
+    response = client.patch(f"/tasks/{task.id}/block")
+    assert response.status_code == 404
+
+
+def test_board_view_still_filters_by_label(client, db_session):
+    # Regression check: the pre-redesign `/tasks?labels=X` filter (covered by
+    # test_filter_tasks_by_label / test_filter_tasks_by_multiple_labels_is_or_matched
+    # earlier in this file) must keep working now that the default view is
+    # the NOW/NEXT/DONE board instead of a flat list.
+    from app.models import Label, Task
+
+    due_today = datetime.now(UTC).strftime("%Y-%m-%dT12:00")
+    client.post("/tasks", data={"title": "Tagged task", "due_date": due_today})
+    client.post("/tasks", data={"title": "Untagged task", "due_date": due_today})
+    client.post("/labels", data={"name": "Urgent", "color": "#ef4444"})
+    label = db_session.query(Label).filter_by(name="Urgent").one()
+    tagged = db_session.query(Task).filter_by(title="Tagged task").one()
+    client.post(f"/tasks/{tagged.id}/labels", data={"label_id": label.id})
+
+    response = client.get(f"/tasks?labels={label.id}")
+    assert response.status_code == 200
+    assert "Tagged task" in response.text
+    assert "Untagged task" not in response.text

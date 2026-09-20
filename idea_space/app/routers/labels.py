@@ -70,12 +70,6 @@ def assign_label(
         task.labels.append(label)
         db.commit()
 
-    from app.routers.tasks import _open_tasks
+    from app.routers.tasks import _render_task_board
 
-    tasks = _open_tasks(db)
-    all_labels = _all_labels(db)
-    return templates.TemplateResponse(
-        request,
-        "tasks/_task_list_only.html",
-        {"tasks": tasks, "all_labels": all_labels},
-    )
+    return _render_task_board(request, db)

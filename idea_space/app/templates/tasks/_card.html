@@ -1,0 +1,50 @@
+<div class="task-card{% if task.status == 'done' %} task-card--done{% endif %}" data-task-id="{{ task.id }}">
+  <div class="task-card-title-row">
+    {% if task.status == "open" %}
+    <form hx-post="/tasks/{{ task.id }}/complete" hx-target="#task-board" hx-swap="outerHTML" style="display:contents;">
+      <input type="checkbox" class="task-card-checkbox" onclick="this.form.requestSubmit()">
+    </form>
+    {% else %}
+    <input type="checkbox" class="task-card-checkbox" checked disabled>
+    {% endif %}
+    <span class="task-card-title">{{ task.title }}</span>
+  </div>
+  <div class="task-card-meta">
+    <div style="display:flex; gap:6px; align-items:center;">
+      {% for label in task.labels %}
+      <span class="task-card-tag" style="background-color: {{ label.color }};">{{ label.name }}</span>
+      {% endfor %}
+      {% if task.blocked %}
+      <span class="task-card-blocked-badge">BLOCKED</span>
+      {% endif %}
+    </div>
+    <span class="task-card-due{% if task.status == 'done' %} task-card-due--done{% endif %}">
+      {% if task.status == "done" %}Done{% else %}{{ task.due_date.strftime('%b %d') }}{% endif %}
+    </span>
+  </div>
+  <div class="task-card-actions">
+    <button hx-patch="/tasks/{{ task.id }}/block" hx-target="#task-board" hx-swap="outerHTML">
+      {{ "Unblock" if task.blocked else "Block" }}
+    </button>
+    {% if task.recurrence_pattern %}
+    <button hx-patch="/tasks/{{ task.id }}/recurrence" hx-vals='{"active": "{{ "false" if task.recurrence_active else "true" }}"}' hx-target="#task-board" hx-swap="outerHTML">
+      {{ "Pause" if task.recurrence_active else "Resume" }}
+    </button>
+    {% endif %}
+    {% if all_labels %}
+    <form hx-post="/tasks/{{ task.id }}/labels" hx-target="#task-board" hx-swap="outerHTML" style="display:inline">
+      <select name="label_id">
+        {% for label in all_labels %}
+        <option value="{{ label.id }}">{{ label.name }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Add label</button>
+    </form>
+    {% endif %}
+    {% if task.status == "done" %}
+    <button hx-post="/tasks/{{ task.id }}/archive" hx-target="#task-board" hx-swap="outerHTML">Archive</button>
+    {% endif %}
+    <button hx-get="/tasks/{{ task.id }}/history" hx-target="#history-{{ task.id }}" hx-swap="outerHTML">History</button>
+  </div>
+  <div id="history-{{ task.id }}" class="task-history"></div>
+</div>

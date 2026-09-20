@@ -1,6 +1,6 @@
 <ul id="task-list">
   {% if not tasks %}
-  <p>No tasks yet — add one above.</p>
+  <p class="agenda-empty">No archived tasks.</p>
   {% else %}
   {% for task in tasks %}
     {% include "tasks/_row.html" %}

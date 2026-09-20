@@ -1,0 +1,104 @@
+<div id="task-board">
+  <div class="metrics-row">
+    <div class="metric-card">
+      <span class="metric-label">OPEN</span>
+      <div class="metric-value-row">
+        <span class="metric-value">{{ "%02d"|format(open_count) }}</span>
+      </div>
+    </div>
+    <div class="metric-card">
+      <span class="metric-label">IN FOCUS</span>
+      <div class="metric-value-row">
+        <span class="metric-value">{{ "%02d"|format(in_focus_count) }}</span>
+        <span class="metric-note metric-note--warning">Due today</span>
+      </div>
+    </div>
+    <div class="metric-card">
+      <span class="metric-label">COMPLETED</span>
+      <div class="metric-value-row">
+        <span class="metric-value">{{ "%02d"|format(completed_count) }}</span>
+        <span class="metric-note metric-note--success">{{ velocity }}% velocity</span>
+      </div>
+    </div>
+    <div class="metric-card">
+      <span class="metric-label">BLOCKED</span>
+      <div class="metric-value-row">
+        <span class="metric-value">{{ "%02d"|format(blocked_count) }}</span>
+        {% if blocked_count > 0 %}<span class="metric-note metric-note--danger">Needs review</span>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="quick-capture">
+    <div class="quick-capture-icon">+</div>
+    <form hx-post="/tasks" hx-target="#task-board" hx-swap="outerHTML" class="quick-capture-fields" style="display:flex;">
+      <div class="quick-capture-fields">
+        <span class="quick-capture-label">CAPTURE AN IDEA</span>
+        <input type="text" name="title" class="quick-capture-input" placeholder="What needs your attention?" required>
+        <input type="hidden" name="due_date" class="js-today-due-date">
+      </div>
+      <button type="submit" style="display:none;" aria-hidden="true">Add</button>
+    </form>
+    <span class="quick-capture-meta">Press Enter</span>
+  </div>
+
+  {% include "labels/_filter_bar.html" %}
+
+  <nav class="filter-bar">
+    {% for label in all_labels|default([]) %}
+    <a href="/tasks?labels={{ label.id }}"
+       class="label-chip{% if label.id in selected_label_ids|default([]) %} label-chip--active{% endif %}"
+       style="background-color: {{ label.color }};">{{ label.name }}</a>
+    {% endfor %}
+    <a href="/tasks">Clear filters</a>
+  </nav>
+
+  <div class="board-columns">
+    <div class="board-column" data-board-column="now">
+      <div class="board-column-header">
+        <div class="board-column-label-group">
+          <span class="board-column-dot board-column-dot--now"></span>
+          <span class="board-column-label">NOW</span>
+        </div>
+        <span class="board-column-count">{{ columns.now|length }} tasks</span>
+      </div>
+      {% for task in columns.now %}
+        {% include "tasks/_card.html" %}
+      {% endfor %}
+    </div>
+    <div class="board-column" data-board-column="next">
+      <div class="board-column-header">
+        <div class="board-column-label-group">
+          <span class="board-column-dot board-column-dot--next"></span>
+          <span class="board-column-label">NEXT</span>
+        </div>
+        <span class="board-column-count">{{ columns.next|length }} tasks</span>
+      </div>
+      {% for task in columns.next %}
+        {% include "tasks/_card.html" %}
+      {% endfor %}
+    </div>
+    <div class="board-column" data-board-column="done">
+      <div class="board-column-header">
+        <div class="board-column-label-group">
+          <span class="board-column-dot board-column-dot--done"></span>
+          <span class="board-column-label">DONE</span>
+        </div>
+        <span class="board-column-count">{{ columns.done|length }} tasks</span>
+      </div>
+      {% for task in columns.done %}
+        {% include "tasks/_card.html" %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <p><a class="archived-link" href="/tasks?status=archived">View archived tasks &rarr;</a></p>
+
+  <script>
+    document.querySelectorAll(".js-today-due-date").forEach(function (el) {
+      if (!el.value) {
+        el.value = new Date().toISOString().slice(0, 16);
+      }
+    });
+  </script>
+</div>
