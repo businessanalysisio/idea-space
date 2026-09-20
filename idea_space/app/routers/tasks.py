@@ -8,6 +8,7 @@ from app.db import get_db
 from app.models import Label, Task
 from app.routers import calendar as calendar_router
 from app.seed import seed_default_workspace
+from app.services.activity import record_change
 from app.services.recurrence import compute_next_due_date
 
 router = APIRouter()
@@ -107,13 +108,20 @@ def create_task(
 
 
 @router.post("/tasks/{task_id}/complete")
-def complete_task(request: Request, task_id: int, db: Session = Depends(get_db)):
+def complete_task(
+    request: Request,
+    task_id: int,
+    completion_note: str | None = Form(None),
+    db: Session = Depends(get_db),
+):
     task = db.get(Task, task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
 
+    record_change(db, task, "status", task.status, "done")
     task.status = "done"
     task.completed_at = datetime.now(timezone.utc)
+    task.completion_note = completion_note or None
     db.commit()
 
     if task.recurrence_active:

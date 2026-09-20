@@ -257,3 +257,56 @@ def test_filter_tasks_by_multiple_labels_is_or_matched(client, db_session):
 def test_clear_filters_link_present(client):
     response = client.get("/tasks?labels=1&status=open")
     assert b'href="/tasks"' in response.content
+
+
+def test_complete_task_with_note_stores_it(client, db_session):
+    from app.models import Task
+
+    due = (datetime.now(UTC) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+    client.post("/tasks", data={"title": "Draft outline", "due_date": due})
+    task = db_session.query(Task).filter_by(title="Draft outline").one()
+
+    client.post(f"/tasks/{task.id}/complete", data={"completion_note": "Sent to stakeholders"})
+
+    db_session.refresh(task)
+    assert task.completion_note == "Sent to stakeholders"
+
+
+def test_complete_task_without_note_leaves_it_none(client, db_session):
+    from app.models import Task
+
+    due = (datetime.now(UTC) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+    client.post("/tasks", data={"title": "Draft outline", "due_date": due})
+    task = db_session.query(Task).filter_by(title="Draft outline").one()
+
+    client.post(f"/tasks/{task.id}/complete")
+
+    db_session.refresh(task)
+    assert task.completion_note is None
+
+
+def test_complete_task_with_empty_note_normalizes_to_none(client, db_session):
+    from app.models import Task
+
+    due = (datetime.now(UTC) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+    client.post("/tasks", data={"title": "Draft outline", "due_date": due})
+    task = db_session.query(Task).filter_by(title="Draft outline").one()
+
+    client.post(f"/tasks/{task.id}/complete", data={"completion_note": ""})
+
+    db_session.refresh(task)
+    assert task.completion_note is None
+
+
+def test_complete_task_logs_status_change(client, db_session):
+    from app.models import ActivityLog, Task
+
+    due = (datetime.now(UTC) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+    client.post("/tasks", data={"title": "Draft outline", "due_date": due})
+    task = db_session.query(Task).filter_by(title="Draft outline").one()
+
+    client.post(f"/tasks/{task.id}/complete")
+
+    entry = db_session.query(ActivityLog).filter_by(task_id=task.id, field_name="status").one()
+    assert entry.old_value == "open"
+    assert entry.new_value == "done"
