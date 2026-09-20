@@ -39,10 +39,6 @@ def _filtered_tasks(db: Session, label_ids: list[int] | None, status: str) -> li
     return _attach_overdue_flag(tasks)
 
 
-def _open_tasks(db: Session) -> list[Task]:
-    return _filtered_tasks(db, None, "open")
-
-
 def _board_columns(open_tasks: list[Task], done_tasks: list[Task]) -> dict:
     now = datetime.now(timezone.utc)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)

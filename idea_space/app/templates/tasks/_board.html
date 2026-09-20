@@ -31,7 +31,7 @@
 
   <div class="quick-capture">
     <div class="quick-capture-icon">+</div>
-    <form hx-post="/tasks" hx-target="#task-board" hx-swap="outerHTML" class="quick-capture-fields" style="display:flex;">
+    <form hx-post="/tasks" hx-target="#task-board" hx-swap="outerHTML" style="display:flex;">
       <div class="quick-capture-fields">
         <span class="quick-capture-label">CAPTURE AN IDEA</span>
         <input type="text" name="title" class="quick-capture-input" placeholder="What needs your attention?" required>
@@ -41,6 +41,13 @@
     </form>
     <span class="quick-capture-meta">Press Enter</span>
   </div>
+
+  <details style="margin-bottom:26px;">
+    <summary style="cursor:pointer; color: var(--text-muted); font-size:11px; font-weight:700;">NEW TASK — full options (recurrence, reminders, due date)</summary>
+    <div style="margin-top:12px;">
+      {% include "tasks/_form.html" %}
+    </div>
+  </details>
 
   {% include "labels/_filter_bar.html" %}
 

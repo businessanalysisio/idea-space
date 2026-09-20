@@ -1,37 +1,12 @@
-<li class="task{% if task.is_overdue %} task--overdue{% endif %}" data-task-id="{{ task.id }}" draggable="true">
+<li class="task" data-task-id="{{ task.id }}">
   <span class="task-title">{{ task.title }}</span>
   <span class="task-due">{{ task.due_date.strftime('%Y-%m-%d %H:%M') }}</span>
   {% if task.recurrence_pattern %}
-    <span class="task-recurring" title="Repeats {{ task.recurrence_pattern }}">↻</span>
-    <button
-      hx-patch="/tasks/{{ task.id }}/recurrence"
-      hx-vals='{"active": "{{ "false" if task.recurrence_active else "true" }}"}'
-      hx-target="#task-list" hx-swap="outerHTML">
-      {{ "Pause" if task.recurrence_active else "Resume" }}
-    </button>
+  <span class="task-recurring" title="Repeats {{ task.recurrence_pattern }}">↻</span>
   {% endif %}
   {% for label in task.labels %}
   <span class="label-chip" style="background-color: {{ label.color }};">{{ label.name }}</span>
   {% endfor %}
-  {% if all_labels %}
-  <form hx-post="/tasks/{{ task.id }}/labels" hx-target="#task-list" hx-swap="outerHTML" style="display:inline">
-    <select name="label_id">
-      {% for label in all_labels %}
-      <option value="{{ label.id }}">{{ label.name }}</option>
-      {% endfor %}
-    </select>
-    <button type="submit">Add label</button>
-  </form>
-  {% endif %}
-  {% if task.status == "open" %}
-  <form hx-post="/tasks/{{ task.id }}/complete" hx-target="#task-list" hx-swap="outerHTML" style="display:inline">
-    <input type="text" name="completion_note" placeholder="Completion note (optional)">
-    <button type="submit">Done</button>
-  </form>
-  {% endif %}
-  {% if task.status == "done" %}
-  <button hx-post="/tasks/{{ task.id }}/archive" hx-target="#task-list" hx-swap="outerHTML">Archive</button>
-  {% endif %}
   <button hx-get="/tasks/{{ task.id }}/history" hx-target="#history-{{ task.id }}" hx-swap="outerHTML">History</button>
   <div id="history-{{ task.id }}" class="task-history"></div>
 </li>

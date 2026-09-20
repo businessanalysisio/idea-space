@@ -409,6 +409,24 @@ main { padding: 32px 40px; }
 
 .task-card-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 
+#task-list { list-style: none; margin: 0; padding: 0; }
+
+.task {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+}
+
+.task--overdue { border-color: var(--danger); background: var(--danger-bg); }
+.task-title { font-weight: 600; }
+.task-due { font-size: 11px; color: var(--text-muted); }
+.task-recurring { color: var(--accent); }
+
 .archived-link { font-size: 11px; color: var(--text-muted); text-decoration: none; }
 
 .task-history {
@@ -532,6 +550,7 @@ main { padding: 32px 40px; }
 .calendar-event { display: flex; gap: 6px; align-items: center; }
 .calendar-event-marker { width: 3px; height: 18px; flex-shrink: 0; }
 .calendar-event-name { font-size: 9px; font-weight: 500; }
+.task--virtual { opacity: 0.55; font-style: italic; }
 
 .calendar-overdue { margin-bottom: 16px; padding: 0 16px; }
 

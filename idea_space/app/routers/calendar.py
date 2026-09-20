@@ -32,6 +32,7 @@ def _month_start(month_param: str | None) -> date:
 
 def _open_tasks_normalized(db: Session) -> list[Task]:
     open_tasks = db.query(Task).filter(Task.status == "open").all()
+    # SQLite strips tzinfo on read-back; normalize before comparing.
     for t in open_tasks:
         if t.due_date.tzinfo is None:
             t.due_date = t.due_date.replace(tzinfo=timezone.utc)

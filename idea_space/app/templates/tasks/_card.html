@@ -1,8 +1,9 @@
 <div class="task-card{% if task.status == 'done' %} task-card--done{% endif %}" data-task-id="{{ task.id }}">
   <div class="task-card-title-row">
     {% if task.status == "open" %}
-    <form hx-post="/tasks/{{ task.id }}/complete" hx-target="#task-board" hx-swap="outerHTML" style="display:contents;">
+    <form hx-post="/tasks/{{ task.id }}/complete" hx-target="#task-board" hx-swap="outerHTML" style="display:flex; gap:6px; align-items:center; flex:1;">
       <input type="checkbox" class="task-card-checkbox" onclick="this.form.requestSubmit()">
+      <input type="text" name="completion_note" placeholder="Note (optional)" onclick="event.stopPropagation()" style="flex:1; font-size:11px; padding:4px 6px; background: var(--panel-bg-alt); border:1px solid var(--border); color: var(--text-primary);">
     </form>
     {% else %}
     <input type="checkbox" class="task-card-checkbox" checked disabled>

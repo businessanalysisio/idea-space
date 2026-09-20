@@ -571,6 +571,14 @@ def test_block_archived_task_returns_404(client, db_session):
     assert response.status_code == 404
 
 
+def test_full_task_form_with_recurrence_and_reminder_fields_is_reachable(client):
+    response = client.get("/tasks")
+    assert response.status_code == 200
+    body = response.text
+    assert 'name="recurrence_pattern"' in body
+    assert 'name="remind_at"' in body
+
+
 def test_board_view_still_filters_by_label(client, db_session):
     # Regression check: the pre-redesign `/tasks?labels=X` filter (covered by
     # test_filter_tasks_by_label / test_filter_tasks_by_multiple_labels_is_or_matched
