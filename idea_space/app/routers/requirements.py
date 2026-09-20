@@ -144,3 +144,75 @@ def delete_requirement(requirement_id: int, db: Session = Depends(get_db)):
     # (verified empirically) — set the header directly on the returned
     # Response instead.
     return Response(status_code=200, headers={"HX-Redirect": "/requirements"})
+
+
+@router.post("/requirements/{requirement_id}/stakeholders")
+def link_stakeholder(
+    request: Request, requirement_id: int, stakeholder_id: int = Form(...), db: Session = Depends(get_db)
+):
+    requirement = db.get(Requirement, requirement_id)
+    stakeholder = db.get(Stakeholder, stakeholder_id)
+    if requirement is None or stakeholder is None:
+        raise HTTPException(status_code=404, detail="Requirement or stakeholder not found")
+
+    if stakeholder not in requirement.stakeholders:
+        requirement.stakeholders.append(stakeholder)
+        db.commit()
+
+    return templates.TemplateResponse(
+        request, "requirements/_page.html", _requirement_page_context(db, requirement)
+    )
+
+
+@router.post("/requirements/{requirement_id}/decisions")
+def link_decision(
+    request: Request, requirement_id: int, decision_id: int = Form(...), db: Session = Depends(get_db)
+):
+    requirement = db.get(Requirement, requirement_id)
+    decision = db.get(Decision, decision_id)
+    if requirement is None or decision is None:
+        raise HTTPException(status_code=404, detail="Requirement or decision not found")
+
+    if decision not in requirement.decisions:
+        requirement.decisions.append(decision)
+        db.commit()
+
+    return templates.TemplateResponse(
+        request, "requirements/_page.html", _requirement_page_context(db, requirement)
+    )
+
+
+@router.post("/requirements/{requirement_id}/risks")
+def link_risk(
+    request: Request, requirement_id: int, risk_id: int = Form(...), db: Session = Depends(get_db)
+):
+    requirement = db.get(Requirement, requirement_id)
+    risk = db.get(Risk, risk_id)
+    if requirement is None or risk is None:
+        raise HTTPException(status_code=404, detail="Requirement or risk not found")
+
+    if risk not in requirement.risks:
+        requirement.risks.append(risk)
+        db.commit()
+
+    return templates.TemplateResponse(
+        request, "requirements/_page.html", _requirement_page_context(db, requirement)
+    )
+
+
+@router.post("/requirements/{requirement_id}/tasks")
+def link_task(
+    request: Request, requirement_id: int, task_id: int = Form(...), db: Session = Depends(get_db)
+):
+    requirement = db.get(Requirement, requirement_id)
+    task = db.get(Task, task_id)
+    if requirement is None or task is None:
+        raise HTTPException(status_code=404, detail="Requirement or task not found")
+
+    if task not in requirement.tasks:
+        requirement.tasks.append(task)
+        db.commit()
+
+    return templates.TemplateResponse(
+        request, "requirements/_page.html", _requirement_page_context(db, requirement)
+    )
