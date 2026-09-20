@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError, ProgrammingError
 
 from app.db import Base, SessionLocal, engine
 from app.middleware import SitePasswordMiddleware
@@ -73,9 +74,31 @@ def ensure_redesign_columns(target_engine) -> None:
             conn.commit()
 
 
+def _create_all_tolerating_races(target_engine) -> None:
+    """Create every table, tolerating a concurrent cold start racing to
+    create the same table under Postgres.
+
+    Serverless invocations can start concurrently, each running this same
+    startup handler against a brand-new database at once. SQLite is
+    single-writer so this race never happened locally, but under Postgres
+    two simultaneous `CREATE TABLE` statements for the same table can both
+    pass SQLAlchemy's own "does it exist yet" check and then have one of
+    them fail with a duplicate-object error. Creating tables one at a time
+    (instead of one bulk `create_all` call) means a race on one table
+    doesn't abort the tables that haven't been attempted yet in this same
+    invocation.
+    """
+    for table in Base.metadata.sorted_tables:
+        try:
+            table.create(bind=target_engine, checkfirst=True)
+        except (IntegrityError, ProgrammingError):
+            # Another concurrent invocation created this table first.
+            pass
+
+
 @app.on_event("startup")
 def on_startup():
-    Base.metadata.create_all(bind=engine)
+    _create_all_tolerating_races(engine)
     ensure_completion_note_column(engine)
     ensure_redesign_columns(engine)
     db = SessionLocal()

@@ -117,6 +117,39 @@ def test_startup_adds_redesign_columns_to_existing_tables(tmp_path):
     ensure_redesign_columns(old_engine)
 
 
+def test_create_all_tolerating_races_survives_a_duplicate_table_error(monkeypatch):
+    from sqlalchemy.exc import IntegrityError
+
+    from app.db import Base
+    from app.main import _create_all_tolerating_races
+
+    tables = list(Base.metadata.sorted_tables)
+    assert len(tables) >= 2, "need at least 2 real tables to exercise this"
+
+    raising_table = tables[0]
+    calls = []
+
+    def raise_duplicate(*args, **kwargs):
+        raise IntegrityError("CREATE TABLE ...", {}, Exception("duplicate key"))
+
+    def record_call(table_name):
+        def _create(*args, **kwargs):
+            calls.append(table_name)
+
+        return _create
+
+    monkeypatch.setattr(raising_table, "create", raise_duplicate)
+    for table in tables:
+        if table is not raising_table:
+            monkeypatch.setattr(table, "create", record_call(table.name))
+
+    # Should not raise, and should still attempt every other table even
+    # though the first one hit the simulated race.
+    _create_all_tolerating_races(None)
+
+    assert len(calls) == len(tables) - 1
+
+
 def test_ensure_completion_note_column_skips_non_sqlite_dialects(monkeypatch):
     from sqlalchemy import create_engine
 
