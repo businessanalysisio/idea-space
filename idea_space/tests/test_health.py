@@ -64,3 +64,56 @@ def test_startup_adds_completion_note_column_to_existing_tasks_table(tmp_path):
     ensure_completion_note_column(old_engine)
 
     old_engine.dispose()
+
+
+def test_startup_adds_redesign_columns_to_existing_tables(tmp_path):
+    # Same rationale as test_startup_adds_completion_note_column_to_existing_tasks_table:
+    # exercise the migration function directly against a raw-DDL legacy
+    # database rather than reloading app modules mid-suite.
+    from sqlalchemy import create_engine, text as sa_text
+
+    from app.main import ensure_redesign_columns
+
+    db_path = tmp_path / "pre_redesign.db"
+    old_engine = create_engine(f"sqlite:///{db_path}")
+    with old_engine.connect() as conn:
+        conn.execute(sa_text(
+            "CREATE TABLE tasks (id INTEGER PRIMARY KEY, workspace_id INTEGER, "
+            "owner_id INTEGER, title TEXT, description TEXT, status TEXT, "
+            "due_date DATETIME, recurrence_series_id INTEGER, recurrence_pattern TEXT, "
+            "recurrence_interval INTEGER, recurrence_days_of_week TEXT, "
+            "recurrence_active BOOLEAN, created_at DATETIME, completed_at DATETIME, "
+            "completion_note TEXT)"
+        ))
+        conn.execute(sa_text(
+            "CREATE TABLE requirements (id INTEGER PRIMARY KEY, workspace_id INTEGER, "
+            "owner_id INTEGER, title TEXT, description TEXT, business_need TEXT, "
+            "acceptance_criteria TEXT, status TEXT, created_at DATETIME)"
+        ))
+        conn.execute(sa_text(
+            "INSERT INTO requirements (id, workspace_id, owner_id, title, description, "
+            "business_need, acceptance_criteria, status, created_at) VALUES "
+            "(1, 1, 1, 'Legacy req', '', '', '', 'draft', '2026-01-01 00:00:00')"
+        ))
+        conn.commit()
+
+    ensure_redesign_columns(old_engine)
+
+    with old_engine.connect() as conn:
+        task_columns = {row[1] for row in conn.execute(sa_text("PRAGMA table_info(tasks)"))}
+        assert "blocked" in task_columns
+
+        requirement_columns = {
+            row[1] for row in conn.execute(sa_text("PRAGMA table_info(requirements)"))
+        }
+        assert "updated_at" in requirement_columns
+
+        backfilled = conn.execute(
+            sa_text("SELECT updated_at FROM requirements WHERE id = 1")
+        ).scalar()
+        assert backfilled == "2026-01-01 00:00:00"
+
+    # Idempotent: running again against an already-migrated db is a no-op.
+    ensure_redesign_columns(old_engine)
+
+    old_engine.dispose()

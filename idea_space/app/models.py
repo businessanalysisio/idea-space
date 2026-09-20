@@ -61,6 +61,7 @@ class Task(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completion_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    blocked: Mapped[bool] = mapped_column(Boolean, default=False)
 
     labels: Mapped[list[Label]] = relationship(secondary="task_labels")
 
@@ -163,6 +164,7 @@ class Requirement(Base):
     acceptance_criteria: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String(20), default="draft")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     stakeholders: Mapped[list[Stakeholder]] = relationship(secondary="requirement_stakeholders")
     decisions: Mapped[list[Decision]] = relationship(secondary="requirement_decisions")

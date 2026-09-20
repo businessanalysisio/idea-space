@@ -34,10 +34,36 @@ def ensure_completion_note_column(target_engine) -> None:
             conn.commit()
 
 
+def ensure_redesign_columns(target_engine) -> None:
+    """Idempotently add tasks.blocked and requirements.updated_at to a
+    pre-existing (pre-redesign) database.
+
+    Same rationale as ensure_completion_note_column: create_all never adds
+    columns to a table that already exists, so a database created before
+    this redesign needs these two columns patched in directly.
+    """
+    with target_engine.connect() as conn:
+        task_columns = {row[1] for row in conn.execute(text("PRAGMA table_info(tasks)"))}
+        if "blocked" not in task_columns:
+            conn.execute(text("ALTER TABLE tasks ADD COLUMN blocked BOOLEAN DEFAULT 0"))
+            conn.commit()
+
+        requirement_columns = {
+            row[1] for row in conn.execute(text("PRAGMA table_info(requirements)"))
+        }
+        if "updated_at" not in requirement_columns:
+            conn.execute(text("ALTER TABLE requirements ADD COLUMN updated_at DATETIME"))
+            conn.execute(
+                text("UPDATE requirements SET updated_at = created_at WHERE updated_at IS NULL")
+            )
+            conn.commit()
+
+
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
     ensure_completion_note_column(engine)
+    ensure_redesign_columns(engine)
     db = SessionLocal()
     try:
         seed_default_workspace(db)
