@@ -1,0 +1,14 @@
+<div id="history-{{ task_id }}" class="task-history">
+  {% if completion_note %}
+  <p class="history-note"><strong>Note:</strong> {{ completion_note }}</p>
+  {% endif %}
+  {% if not entries %}
+  <p class="history-empty">No changes recorded yet.</p>
+  {% else %}
+  <ul class="history-list">
+    {% for entry in entries %}
+    <li>{{ entry.changed_at.strftime('%Y-%m-%d %H:%M') }} — {{ entry.field_name }}: {{ entry.old_value }} → {{ entry.new_value }}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+</div>

@@ -5,7 +5,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Label, Task
+from app.models import ActivityLog, Label, Task
 from app.routers import calendar as calendar_router
 from app.seed import seed_default_workspace
 from app.services.activity import record_change
@@ -182,6 +182,25 @@ def archive_task(request: Request, task_id: int, db: Session = Depends(get_db)):
         request,
         "tasks/_task_list_only.html",
         {"tasks": tasks, "all_labels": all_labels},
+    )
+
+
+@router.get("/tasks/{task_id}/history")
+def task_history(request: Request, task_id: int, db: Session = Depends(get_db)):
+    task = db.get(Task, task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    entries = (
+        db.query(ActivityLog)
+        .filter(ActivityLog.task_id == task_id)
+        .order_by(ActivityLog.changed_at.desc())
+        .all()
+    )
+    return templates.TemplateResponse(
+        request,
+        "tasks/_history.html",
+        {"task_id": task_id, "entries": entries, "completion_note": task.completion_note},
     )
 
 

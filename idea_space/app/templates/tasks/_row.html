@@ -27,4 +27,6 @@
   {% if task.status == "done" %}
   <button hx-post="/tasks/{{ task.id }}/archive" hx-target="#task-list" hx-swap="outerHTML">Archive</button>
   {% endif %}
+  <button hx-get="/tasks/{{ task.id }}/history" hx-target="#history-{{ task.id }}" hx-swap="innerHTML">History</button>
+  <div id="history-{{ task.id }}" class="task-history"></div>
 </li>

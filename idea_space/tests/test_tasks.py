@@ -372,3 +372,42 @@ def test_archive_moves_task_from_done_to_archived_view(client, db_session):
 def test_list_tasks_rejects_invalid_status(client):
     response = client.get("/tasks?status=banana")
     assert response.status_code == 400
+
+
+def test_history_lists_entries_newest_first_and_includes_note(client, db_session):
+    from app.models import Task
+
+    due = datetime(2026, 9, 22, 10, 0, tzinfo=UTC)
+    client.post(
+        "/tasks",
+        data={"title": "Stakeholder sync", "due_date": due.strftime("%Y-%m-%dT%H:%M")},
+    )
+    task = db_session.query(Task).filter_by(title="Stakeholder sync").one()
+
+    client.patch(f"/tasks/{task.id}/reschedule", data={"due_date": "2026-09-24"})
+    client.post(f"/tasks/{task.id}/complete", data={"completion_note": "Done early"})
+
+    response = client.get(f"/tasks/{task.id}/history")
+    assert response.status_code == 200
+    body = response.content.decode()
+    assert "Done early" in body
+    assert "due_date" in body
+    assert "status" in body
+    assert body.index("status") < body.index("due_date")
+
+
+def test_history_unknown_task_returns_404(client):
+    response = client.get("/tasks/999/history")
+    assert response.status_code == 404
+
+
+def test_history_empty_for_task_with_no_changes(client, db_session):
+    from app.models import Task
+
+    due = (datetime.now(UTC) + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M")
+    client.post("/tasks", data={"title": "Draft outline", "due_date": due})
+    task = db_session.query(Task).filter_by(title="Draft outline").one()
+
+    response = client.get(f"/tasks/{task.id}/history")
+    assert response.status_code == 200
+    assert b"No changes recorded yet" in response.content
