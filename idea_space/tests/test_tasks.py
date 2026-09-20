@@ -598,3 +598,79 @@ def test_board_view_still_filters_by_label(client, db_session):
     assert response.status_code == 200
     assert "Tagged task" in response.text
     assert "Untagged task" not in response.text
+
+
+def test_edit_task_updates_title_and_due_date(client, db_session):
+    from app.models import Task
+
+    due = datetime.now(UTC).strftime("%Y-%m-%dT12:00")
+    client.post("/tasks", data={"title": "Original title", "due_date": due})
+    task = db_session.query(Task).filter_by(title="Original title").one()
+
+    new_due = (datetime.now(UTC) + timedelta(days=3)).strftime("%Y-%m-%dT09:30")
+    response = client.patch(
+        f"/tasks/{task.id}",
+        data={"title": "Updated title", "due_date": new_due},
+    )
+    assert response.status_code == 200
+    assert "Updated title" in response.text
+    assert "Original title" not in response.text
+
+    db_session.refresh(task)
+    assert task.title == "Updated title"
+    if task.due_date.tzinfo is None:
+        task.due_date = task.due_date.replace(tzinfo=timezone.utc)
+    expected = datetime.fromisoformat(new_due).replace(tzinfo=UTC)
+    assert task.due_date == expected
+
+
+def test_edit_task_logs_title_and_due_date_changes(client, db_session):
+    from app.models import ActivityLog, Task
+
+    due = datetime.now(UTC).strftime("%Y-%m-%dT12:00")
+    client.post("/tasks", data={"title": "Draft plan", "due_date": due})
+    task = db_session.query(Task).filter_by(title="Draft plan").one()
+
+    new_due = (datetime.now(UTC) + timedelta(days=1)).strftime("%Y-%m-%dT08:00")
+    client.patch(f"/tasks/{task.id}", data={"title": "Finalize plan", "due_date": new_due})
+
+    entries = db_session.query(ActivityLog).filter_by(task_id=task.id).all()
+    field_names = {entry.field_name for entry in entries}
+    assert "title" in field_names
+    assert "due_date" in field_names
+
+
+def test_edit_task_with_unchanged_fields_does_not_log_changes(client, db_session):
+    from app.models import ActivityLog, Task
+
+    due = datetime.now(UTC).strftime("%Y-%m-%dT12:00")
+    client.post("/tasks", data={"title": "Stable task", "due_date": due})
+    task = db_session.query(Task).filter_by(title="Stable task").one()
+
+    if task.due_date.tzinfo is None:
+        unchanged_due = task.due_date.replace(tzinfo=timezone.utc).strftime("%Y-%m-%dT%H:%M")
+    else:
+        unchanged_due = task.due_date.strftime("%Y-%m-%dT%H:%M")
+    client.patch(f"/tasks/{task.id}", data={"title": "Stable task", "due_date": unchanged_due})
+
+    entries = db_session.query(ActivityLog).filter_by(task_id=task.id).all()
+    assert entries == []
+
+
+def test_edit_nonexistent_task_returns_404(client):
+    response = client.patch("/tasks/999999", data={"title": "Nope", "due_date": "2026-10-01T09:00"})
+    assert response.status_code == 404
+
+
+def test_tasks_board_shows_edit_form_with_prefilled_values(client, db_session):
+    from app.models import Task
+
+    due = datetime(2026, 10, 5, 14, 30, tzinfo=UTC)
+    client.post("/tasks", data={"title": "Editable card", "due_date": due.strftime("%Y-%m-%dT%H:%M")})
+    task = db_session.query(Task).filter_by(title="Editable card").one()
+
+    response = client.get("/tasks")
+    body = response.text
+    assert f'hx-patch="/tasks/{task.id}"' in body
+    assert 'value="Editable card"' in body
+    assert 'value="2026-10-05T14:30"' in body

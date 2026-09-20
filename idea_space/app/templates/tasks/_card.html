@@ -47,5 +47,13 @@
     {% endif %}
     <button hx-get="/tasks/{{ task.id }}/history" hx-target="#history-{{ task.id }}" hx-swap="outerHTML">History</button>
   </div>
+  <details style="margin-top:6px;">
+    <summary style="cursor:pointer; font-size:9px; font-weight:700; color: var(--text-muted);">Edit</summary>
+    <form hx-patch="/tasks/{{ task.id }}" hx-target="#task-board" hx-swap="outerHTML" style="display:flex; flex-direction:column; gap:6px; margin-top:6px;">
+      <input type="text" name="title" value="{{ task.title }}" required style="background: var(--panel-bg-alt); border:1px solid var(--border); color: var(--text-primary); padding:6px 8px; font-size:11px;">
+      <input type="datetime-local" name="due_date" value="{{ task.due_date.strftime('%Y-%m-%dT%H:%M') }}" required style="background: var(--panel-bg-alt); border:1px solid var(--border); color: var(--text-primary); padding:6px 8px; font-size:11px;">
+      <button type="submit" class="btn-primary" style="align-self:flex-start;">Save</button>
+    </form>
+  </details>
   <div id="history-{{ task.id }}" class="task-history"></div>
 </div>

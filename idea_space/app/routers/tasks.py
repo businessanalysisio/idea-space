@@ -194,6 +194,40 @@ def create_task(
     return _render_task_board(request, db)
 
 
+@router.patch("/tasks/{task_id}")
+def edit_task(
+    request: Request,
+    task_id: int,
+    title: str = Form(...),
+    due_date: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    task = db.get(Task, task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    _normalize_due_date(task)
+    parsed_due = datetime.fromisoformat(due_date).replace(tzinfo=timezone.utc)
+
+    if title != task.title:
+        record_change(db, task, "title", task.title, title)
+        task.title = title
+
+    if parsed_due != task.due_date:
+        record_change(
+            db,
+            task,
+            "due_date",
+            task.due_date.strftime("%Y-%m-%d %H:%M"),
+            parsed_due.strftime("%Y-%m-%d %H:%M"),
+        )
+        task.due_date = parsed_due
+
+    db.commit()
+
+    return _render_task_board(request, db)
+
+
 @router.post("/tasks/{task_id}/complete")
 def complete_task(
     request: Request,
