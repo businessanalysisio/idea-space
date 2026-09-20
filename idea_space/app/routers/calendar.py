@@ -67,5 +67,5 @@ def calendar_week(request: Request, start: str | None = None, db: Session = Depe
     return templates.TemplateResponse(
         request,
         "calendar/week.html",
-        {"days": days, "overdue": overdue, "week_start": week_start},
+        {"days": days, "overdue": overdue, "week_start": week_start, "active_nav": "calendar"},
     )

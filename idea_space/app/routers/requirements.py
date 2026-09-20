@@ -46,6 +46,7 @@ def list_requirements(request: Request, db: Session = Depends(get_db)):
             "all_stakeholders": db.query(Stakeholder).order_by(Stakeholder.name.asc()).all(),
             "all_decisions": db.query(Decision).order_by(Decision.title.asc()).all(),
             "all_risks": db.query(Risk).order_by(Risk.title.asc()).all(),
+            "active_nav": "requirements",
         },
     )
 
@@ -88,7 +89,9 @@ def requirement_detail(request: Request, requirement_id: int, db: Session = Depe
         raise HTTPException(status_code=404, detail="Requirement not found")
 
     return templates.TemplateResponse(
-        request, "requirements/detail.html", _requirement_page_context(db, requirement)
+        request,
+        "requirements/detail.html",
+        {**_requirement_page_context(db, requirement), "active_nav": "requirements"},
     )
 
 

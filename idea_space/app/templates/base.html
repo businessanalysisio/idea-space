@@ -2,22 +2,61 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Idea Space</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/htmx.org@2.0.2"></script>
   <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
-  <header class="app-header">
-    <h1>Idea Space</h1>
-    <nav class="main-nav">
-      <a href="/tasks">Tasks</a>
-      <a href="/calendar">Calendar</a>
-      <a href="/requirements">Requirements</a>
-      <a href="/matrix">Matrix</a>
+{% set nav_labels = {'tasks': 'TASKS', 'calendar': 'CALENDAR', 'requirements': 'REQUIREMENTS', 'matrix': 'TRACEABILITY'} %}
+{% set current_nav = active_nav|default('') %}
+<div class="app-shell">
+  <aside class="app-sidebar">
+    <div class="brand">
+      <div class="brand-mark">IS</div>
+      <div class="brand-text">
+        <div class="brand-name">IDEA SPACE</div>
+        <div class="brand-caption">PRODUCT OPS</div>
+      </div>
+    </div>
+    <nav class="primary-nav">
+      <div class="nav-label">WORKSPACE</div>
+      <a class="nav-item{% if current_nav == 'tasks' %} nav-item--active{% endif %}" href="/tasks">Tasks</a>
+      <a class="nav-item{% if current_nav == 'calendar' %} nav-item--active{% endif %}" href="/calendar">Calendar</a>
+      <a class="nav-item{% if current_nav == 'requirements' %} nav-item--active{% endif %}" href="/requirements">Requirements</a>
+      <a class="nav-item{% if current_nav == 'matrix' %} nav-item--active{% endif %}" href="/matrix">Traceability</a>
     </nav>
-  </header>
-  <div hx-get="/reminders/due" hx-trigger="load" hx-swap="outerHTML" id="reminder-banner"></div>
-  <main>{% block content %}{% endblock %}</main>
-  <script src="/static/app.js"></script>
+    <div class="sidebar-spacer"></div>
+    <div class="workspace-status">
+      <div class="status-row">
+        <span class="status-label">SYSTEM STATUS</span>
+        <span class="status-dot"></span>
+      </div>
+      <div class="status-value">All systems focused</div>
+    </div>
+  </aside>
+  <div class="app-body">
+    <div class="topbar">
+      <div class="breadcrumb">
+        <span class="breadcrumb-workspace">WORKSPACE</span>
+        <span class="breadcrumb-slash">/</span>
+        <span class="breadcrumb-current">{{ nav_labels.get(current_nav, '') }}</span>
+      </div>
+      <div class="topbar-actions">
+        <div class="search-box">
+          <span class="search-hint">Search anything</span>
+          <span class="search-shortcut">&#8984; K</span>
+        </div>
+        <div class="user-avatar">AR</div>
+      </div>
+    </div>
+    <div hx-get="/reminders/due" hx-trigger="load" hx-swap="outerHTML" id="reminder-banner"></div>
+    <main>{% block content %}{% endblock %}</main>
+  </div>
+</div>
+<script src="/static/app.js"></script>
 </body>
 </html>

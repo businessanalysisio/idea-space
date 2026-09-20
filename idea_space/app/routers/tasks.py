@@ -60,6 +60,7 @@ def list_tasks(
             "all_labels": all_labels,
             "selected_label_ids": label_ids or [],
             "status": status,
+            "active_nav": "tasks",
         },
     )
 

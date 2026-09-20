@@ -13,5 +13,5 @@ templates = Jinja2Templates(directory="app/templates")
 def traceability_matrix(request: Request, db: Session = Depends(get_db)):
     requirements = db.query(Requirement).order_by(Requirement.title.asc()).all()
     return templates.TemplateResponse(
-        request, "matrix/index.html", {"requirements": requirements}
+        request, "matrix/index.html", {"requirements": requirements, "active_nav": "matrix"}
     )
