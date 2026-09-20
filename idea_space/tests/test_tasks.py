@@ -310,3 +310,20 @@ def test_complete_task_logs_status_change(client, db_session):
     entry = db_session.query(ActivityLog).filter_by(task_id=task.id, field_name="status").one()
     assert entry.old_value == "open"
     assert entry.new_value == "done"
+
+
+def test_reschedule_logs_due_date_change(client, db_session):
+    from app.models import ActivityLog, Task
+
+    due = datetime(2026, 9, 22, 10, 0, tzinfo=UTC)
+    client.post(
+        "/tasks",
+        data={"title": "Stakeholder sync", "due_date": due.strftime("%Y-%m-%dT%H:%M")},
+    )
+    task = db_session.query(Task).filter_by(title="Stakeholder sync").one()
+
+    client.patch(f"/tasks/{task.id}/reschedule", data={"due_date": "2026-09-24"})
+
+    entry = db_session.query(ActivityLog).filter_by(task_id=task.id, field_name="due_date").one()
+    assert entry.old_value == "2026-09-22"
+    assert entry.new_value == "2026-09-24"

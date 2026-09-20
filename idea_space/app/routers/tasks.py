@@ -195,10 +195,12 @@ def reschedule_task(
     if task is None or task.status != "open":
         raise HTTPException(status_code=404, detail="Task not found")
 
+    old_date_str = task.due_date.strftime("%Y-%m-%d")
     new_date = datetime.strptime(due_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
     task.due_date = task.due_date.replace(
         year=new_date.year, month=new_date.month, day=new_date.day
     )
+    record_change(db, task, "due_date", old_date_str, due_date)
     db.commit()
 
     return calendar_router.calendar_week(request, start=None, db=db)
